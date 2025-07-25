@@ -1,0 +1,40 @@
+# Node.js
+node_modules/
+.env
+.env.*
+uploads/
+resumes/
+
+# Build output
+/dist/
+/build/
+/frontend/dist/
+/backend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java/Gradle
+/doc-service/build/
+/doc-service/.gradle/
+/doc-service/out/
+*.class
+*.jar
+*.war
+*.iml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Misc
+*.bak
+*.tmp 

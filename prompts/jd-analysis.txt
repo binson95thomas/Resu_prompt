@@ -1,0 +1,40 @@
+You are an expert HR analyst specializing in ATS (Applicant Tracking System) optimization. 
+
+Analyze the following job description and extract key information that would be relevant for CV optimization.
+
+Job Description:
+{jobDescription}
+
+Please provide a comprehensive analysis in JSON format with the following structure:
+
+{
+  "keywords": [
+    "List of technical keywords and technologies",
+    "Industry-specific terms",
+    "Action verbs and competencies"
+  ],
+  "skills": [
+    "Technical skills",
+    "Soft skills", 
+    "Domain expertise"
+  ],
+  "requirements": [
+    "Experience requirements",
+    "Education requirements",
+    "Certification requirements"
+  ],
+  "industry": "Industry name",
+  "level": "entry/mid/senior/executive",
+  "summary": "Brief summary of the role and key responsibilities"
+}
+
+Focus on:
+- Technical skills and technologies mentioned
+- Soft skills and competencies required
+- Experience and education requirements
+- Industry-specific terminology
+- Keywords that ATS systems typically look for
+- Action verbs and power words
+- Quantifiable requirements (years of experience, etc.)
+
+Return only the JSON object, no additional text or explanations. 

@@ -1,0 +1,31 @@
+{
+  "name": "ats-resume-optimizer",
+  "version": "1.0.0",
+  "description": "Full-stack ATS Resume Optimizer with AI-powered CV optimization",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:docservice\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:docservice": "cd doc-service && ./gradlew bootRun",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && npm run test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "ats",
+    "resume",
+    "optimizer",
+    "ai",
+    "gemini",
+    "cv",
+    "job-description"
+  ],
+  "author": "ATS Resume Optimizer Team",
+  "license": "MIT"
+} 
