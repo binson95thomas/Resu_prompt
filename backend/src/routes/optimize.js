@@ -2,6 +2,7 @@ import express from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs-extra'
+import mammoth from 'mammoth'
 import { analyzeJobDescription, optimizeCV } from '../services/gemini.js'
 import { extractTextFromDocx } from '../services/document.js'
 
@@ -33,6 +34,63 @@ const upload = multer({
     }
   }
 })
+
+// Serve shared prompt template
+router.get('/prompt-template', async (req, res) => {
+  try {
+    const promptTemplatePath = path.join(process.cwd(), '..', 'prompts', 'cv-optimization-shared.txt');
+    const promptTemplate = await fs.readFile(promptTemplatePath, 'utf8');
+    
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(promptTemplate);
+  } catch (error) {
+    console.error('Failed to serve prompt template:', error);
+    res.status(500).json({
+      error: 'Failed to serve prompt template',
+      message: error.message
+    });
+  }
+});
+
+// Extract CV text for preview
+router.post('/extract-cv-text', upload.single('cv'), async (req, res) => {
+  try {
+    const cvFile = req.file;
+
+    if (!cvFile) {
+      return res.status(400).json({
+        error: 'CV file is required'
+      });
+    }
+
+    // Extract text from CV
+    const cvLines = await extractTextFromDocx(cvFile.path);
+    const cvText = cvLines.join('\n');
+    
+    // Also try to extract HTML for formatted preview
+    let cvHtml = '';
+    try {
+      const buffer = await fs.readFile(cvFile.path);
+      const result = await mammoth.convertToHtml({ buffer });
+      cvHtml = result.value;
+    } catch (htmlError) {
+      console.warn('HTML extraction failed, using text only:', htmlError.message);
+    }
+    
+    res.json({
+      success: true,
+      cvText,
+      cvLines,
+      cvHtml
+    });
+  } catch (error) {
+    console.error('CV text extraction error:', error);
+    res.status(500).json({
+      error: 'Failed to extract CV text',
+      message: error.message
+    });
+  }
+});
 
 // Analyze job description
 router.post('/analyze-jd', async (req, res) => {

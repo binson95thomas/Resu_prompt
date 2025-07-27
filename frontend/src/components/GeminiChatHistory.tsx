@@ -5,6 +5,8 @@ export type ChatEntry = {
   question: string;
   answer: string;
   timestamp: string;
+  model?: string;
+  promptSource?: string;
 };
 
 function tryPrettyPrintJSON(str: string) {
@@ -50,42 +52,82 @@ function CollapsibleBlock({ label, content }: { label: string; content: string }
   );
 }
 
-export default function GeminiChatHistory({ chatHistory, onClearChat, onBackToMain }: { chatHistory: ChatEntry[], onClearChat: () => void, onBackToMain: () => void }) {
+export default function GeminiChatHistory({ open, onClose, chatHistory, onClearChat }: { open: boolean, onClose: () => void, chatHistory: ChatEntry[], onClearChat: () => void }) {
+  if (!open) return null;
+
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Modern Header */}
-      <div className="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-200 p-4 z-10 flex justify-between items-center shadow-sm">
-        <button
-          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded shadow text-xs"
-          onClick={onBackToMain}
-        >
-          ← Back
-        </button>
-        <h2 className="text-lg font-bold text-gray-900 tracking-tight">Gemini Chat History</h2>
-        <button
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow text-xs"
-          onClick={onClearChat}
-        >
-          Clear
-        </button>
-      </div>
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-2 md:p-6 space-y-4">
-        {chatHistory.length === 0 && <div className="text-gray-500 text-center mt-8">No chat history yet.</div>}
-        {chatHistory.map((entry, idx) => (
-          <div key={idx} className={`flex flex-col md:flex-row md:space-x-4 items-start group transition-shadow rounded-lg shadow-sm bg-white/90 hover:shadow-lg p-3 md:p-4 ${idx % 2 === 0 ? 'md:pl-12' : 'md:pr-12'}`}
-            style={{ maxWidth: 900, margin: '0 auto' }}>
-            {/* User Prompt (right) */}
-            <div className="w-full md:w-1/2 flex flex-col items-end mb-2 md:mb-0">
-              <CollapsibleBlock label="Prompt to Gemini" content={entry.question} />
-              <span className="text-[10px] text-gray-400 mt-1">{new Date(entry.timestamp).toLocaleString()}</span>
-            </div>
-            {/* Gemini Response (left) */}
-            <div className="w-full md:w-1/2 flex flex-col items-start">
-              <CollapsibleBlock label="Gemini Response" content={entry.answer} />
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl h-5/6 relative flex flex-col mobile-modal">
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">Chat History</h2>
+          <div className="flex space-x-2">
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+              onClick={onClearChat}
+            >
+              Clear All
+            </button>
+            <button 
+              className="text-gray-400 hover:text-gray-700 text-2xl" 
+              onClick={onClose}
+              aria-label="Close"
+            >
+              &times;
+            </button>
           </div>
-        ))}
+        </div>
+        
+        {/* Chat Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {chatHistory.length === 0 && (
+            <div className="text-gray-500 text-center mt-8">
+              <div className="text-lg font-medium mb-2">No chat history yet</div>
+              <div className="text-sm">Your optimization conversations will appear here</div>
+            </div>
+          )}
+          {chatHistory.map((entry, idx) => (
+            <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</span>
+                  {entry.model && (
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+                      {entry.model}
+                    </span>
+                  )}
+                  {entry.promptSource && (
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      entry.promptSource === 'fallback' 
+                        ? 'bg-red-100 text-red-800' 
+                        : entry.promptSource === 'shared-template'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {entry.promptSource === 'fallback' ? '⚠️ Fallback' : 
+                       entry.promptSource === 'shared-template' ? '✅ Shared Template' :
+                       entry.promptSource === 'manual' ? '📝 Manual' : entry.promptSource}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Prompt */}
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-700 mb-2">Prompt to AI Model</h4>
+                  <CollapsibleBlock label="View Prompt" content={entry.question} />
+                </div>
+                
+                {/* Response */}
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-700 mb-2">AI Response</h4>
+                  <CollapsibleBlock label="View Response" content={entry.answer} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

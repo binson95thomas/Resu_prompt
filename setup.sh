@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Setting up ATS Resume Optimizer..."
+echo "🚀 Setting up ResuPrompt..."
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then

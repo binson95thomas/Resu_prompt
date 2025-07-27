@@ -127,12 +127,26 @@ router.post('/generate-docx', upload.single('cv'), async (req, res) => {
     const downloadName = `${userName}_CV_${fileSerial}.docx`;
     const savePath = path.join(companyFolder, downloadName);
     await fs.writeFile(savePath, optimizedDocxBuffer);
+    
+    // Save job description as text file with same naming pattern
+    const jdFileName = `${userName}_JD_${fileSerial}.txt`;
+    const jdSavePath = path.join(companyFolder, jdFileName);
+    
+    // Add model information to JD file
+    const modelUsed = req.body.modelUsed || 'Unknown Model';
+    const jdContent = `${jobDescription}\n\n---\nOptimization performed using: ${modelUsed}`;
+    await fs.writeFile(jdSavePath, jdContent);
+    
     // Return JSON with download URL, folder path, and openFolderPath (absolute)
     res.json({
       success: true,
       downloadUrl: `/api/document/download?path=${encodeURIComponent(savePath)}`,
       folderPath: companyFolder,
-      openFolderPath: path.resolve(companyFolder)
+      openFolderPath: path.resolve(companyFolder),
+      downloadName: downloadName,
+      savePath: savePath,
+      jdFileName: jdFileName,
+      jdSavePath: jdSavePath
     })
   } catch (error) {
     console.error('DOCX generation error:', error)

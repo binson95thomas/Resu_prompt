@@ -64,7 +64,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    service: 'ATS Resume Optimizer Backend'
+    service: 'ResuPrompt Backend'
   })
 })
 

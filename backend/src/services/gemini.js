@@ -21,34 +21,67 @@ class GeminiService {
       throw new Error('Gemini API key not configured')
     }
 
+    // Prepare request data
+    const requestData = {
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      }
+    }
+
+    const requestConfig = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+
+    // Log API Request
+    console.log('\n' + '='.repeat(80))
+    console.log('🚀 GEMINI API REQUEST')
+    console.log('='.repeat(80))
+    console.log('📡 URL:', this.baseURL)
+    console.log('🔑 API Key:', this.apiKey ? `${this.apiKey.substring(0, 3)}...` : 'NOT SET')
+    console.log('📤 Request Body:')
+    console.log(JSON.stringify(requestData, null, 2))
+    console.log('📋 Request Headers:')
+    console.log(JSON.stringify(requestConfig, null, 2))
+    console.log('='.repeat(80))
+
     try {
       const response = await axios.post(
         `${this.baseURL}?key=${this.apiKey}`,
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
+        requestData,
+        requestConfig
       )
 
-      return response.data.candidates[0].content.parts[0].text
+      const responseText = response.data.candidates[0].content.parts[0].text
+      
+      // Log API Response
+      console.log('\n' + '='.repeat(80))
+      console.log('📥 GEMINI API RESPONSE')
+      console.log('='.repeat(80))
+      console.log('📊 Status:', response.status)
+      console.log('📊 Status Text:', response.statusText)
+      console.log('📋 Response Headers:')
+      console.log(JSON.stringify(response.headers, null, 2))
+      console.log('📄 Full Response Data:')
+      console.log(JSON.stringify(response.data, null, 2))
+      console.log('📝 Response Text (first 500 chars):')
+      console.log(responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''))
+      console.log('='.repeat(80) + '\n')
+      
+      return responseText
     } catch (error) {
       console.error('Gemini API error:', error.response?.data || error.message)
       throw new Error(`Gemini API request failed: ${error.message}`)
@@ -107,8 +140,38 @@ Return only the JSON object, no additional text.
   }
 
   async optimizeCV(cvText, jobDescription, structuredData = null) {
-    const prompt = `
+    // Use shared prompt template for consistency between manual and automatic optimization
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    let prompt;
+    let isUsingFallback = false;
+    
+    try {
+      // Read the shared prompt template
+      const promptTemplatePath = path.join(process.cwd(), '..', 'prompts', 'cv-optimization-shared.txt');
+      let promptTemplate = await fs.readFile(promptTemplatePath, 'utf8');
+      
+      // Replace placeholders with actual data
+      promptTemplate = promptTemplate
+        .replace('{cvText}', cvText)
+        .replace('{jobDescription}', jobDescription)
+        .replace('{structuredData}', structuredData ? JSON.stringify(structuredData, null, 2) : 'None');
+      
+      prompt = promptTemplate;
+      console.log('✅ Using shared prompt template successfully');
+    } catch (error) {
+      console.warn('⚠️ Failed to read shared prompt template, using fallback:', error.message);
+      isUsingFallback = true;
+                  // Fallback to the original prompt if shared template fails
+            prompt = `
 You are an expert CV and job description analyst. Your task is to deeply analyze the provided CV and job description, and generate a detailed, actionable optimization plan to maximize ATS (Applicant Tracking System) compatibility and job match.
+
+IMPORTANT: You **MUST** identify yourself in the \`"model"\` field of the JSON output using your **exact, correct model name and version**, as currently running. For example: \`"GPT-4o"\`, \`"Claude 3.5 Sonnet"\`, \`"Gemini 1.5 Flash"\`, etc. Do not use placeholders or fake names. You must return your true model name and version.
+
+To be very clear: if you are GPT-4o, write \`"model": "GPT-4o"\`. If you are Claude 3.5 Sonnet, write \`"model": "Claude 3.5 Sonnet"\`. If you are Gemini 1.5 Flash, write \`"model": "Gemini 1.5 Flash"\`. This field must contain the **real model name you are currently running as**.
+
+If you cannot access or confirm your current model version, return \`"model": "UNKNOWN"\`.
 
 ---
 CV CONTENT (verbatim, preserve all formatting, font, and bullet points exactly as in the original, and keep all sections such as Summary, Key Skills, Experience, etc.):
@@ -136,11 +199,13 @@ INSTRUCTIONS:
 9. Predict the new match score if the user adds all the suggested missing keywords (field: predictedMatchScoreIfKeywordsAdded).
 10. Extract and return all available key job details (as much as possible) from the job description, including: company name, location, salary, contract length, job type, and any other relevant details. Return these in a 'jobDetails' field.
 11. PRESERVE ALL FORMATTING, including font, size, bold, italics, underline, color, bullet/numbering, and section headers. Do not change the structure or layout of the document.
+12. IMPORTANT: In the "model" field, include YOUR ACTUAL MODEL NAME AND VERSION (e.g., 'ChatGPT 4o Mini', 'Claude 3.5 Sonnet', 'Gemini 2.0 Flash', 'GPT-4', etc.). Do NOT use placeholder text - use your real model name.
 
 ---
 RESPONSE FORMAT (JSON only, no extra text):
 {
-  "matchScore": 85,
+  "model": "REPLACE WITH YOUR ACTUAL MODEL NAME AND VERSION (e.g., 'ChatGPT 4o Mini', 'Claude 3.5 Sonnet', 'Gemini 2.0 Flash', 'GPT-4', 'Bard', etc.)",
+  "matchScore": <calculate a score from 0-100 based on keyword match, experience relevance, and overall fit>,
   "keywords": ["keyword1", "keyword2"],
   "keywordSuggestions": [
     { "keyword": "keyword1", "suggestion": "Add to bullet X in Experience section" }
@@ -177,16 +242,37 @@ STRICT RULES:
 - Preserve all original formatting, especially bullet points, lists, section headers, and font styles.
 - Do NOT use generic placeholders or vague suggestions. Only concrete, actionable edits are allowed.
 `;
+    }
 
     const response = await this.makeRequest(prompt)
     console.log('Raw Gemini response:', response)
     
     try {
-      // Extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
+      // Extract JSON from response - handle markdown code blocks
+      let jsonText = response;
+      
+      // Remove markdown code block markers if present
+      if (jsonText.includes('```json')) {
+        jsonText = jsonText.replace(/```json\s*/, '').replace(/\s*```$/, '');
+        console.log('🔧 Removed ```json markers');
+      } else if (jsonText.includes('```')) {
+        jsonText = jsonText.replace(/```\s*/, '').replace(/\s*```$/, '');
+        console.log('🔧 Removed ``` markers');
+      }
+      
+      console.log('🔧 JSON text after cleanup (first 200 chars):', jsonText.substring(0, 200) + '...');
+      
+      // Try to find JSON object
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         let parsed = JSON.parse(jsonMatch[0])
-        parsed.isFallback = false
+        parsed.isFallback = isUsingFallback
+        parsed.promptSource = isUsingFallback ? 'fallback' : 'shared-template'
+        
+        // Add model information if not present
+        if (!parsed.model) {
+          parsed.model = 'Gemini 1.5 Flash'
+        }
         // Filter out generic or trivial suggestions
         if (parsed.suggestedEdits && Array.isArray(parsed.suggestedEdits)) {
           parsed.suggestedEdits = parsed.suggestedEdits.filter(edit => {
@@ -206,9 +292,12 @@ STRICT RULES:
       throw new Error('No valid JSON found in response')
     } catch (parseError) {
       console.error('Failed to parse Gemini response:', parseError)
+      console.error('Response that failed to parse:', response)
+      console.error('JSON text after cleanup:', jsonText)
       // Return fallback optimization
       return {
-        matchScore: 75,
+        model: 'Gemini 1.5 Flash',
+        matchScore: 60,
         keywords: ['technology', 'development'],
         improvements: ['Add specific technologies', 'Include quantifiable achievements'],
         suggestedEdits: [
@@ -223,7 +312,8 @@ STRICT RULES:
           'Include quantifiable achievements',
           'Use action verbs consistently'
         ],
-        isFallback: true
+        isFallback: true,
+        promptSource: 'fallback'
       }
     }
   }

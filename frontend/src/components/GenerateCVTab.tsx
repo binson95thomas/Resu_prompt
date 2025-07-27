@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Download, FileText, CheckCircle, XCircle, Sparkles } from 'lucide-react'
+import { Download, FileText, XCircle, CheckCircle, Copy, Clipboard } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Tabs from './Tabs';
+import ManualOptimizationModal from './ManualOptimizationModal';
 // Simple diff viewer function
 const createDiffView = (original: string, suggested: string) => {
   const words1 = original.split(/\s+/);
@@ -90,6 +92,107 @@ function applyEditsToCV(cvText: string, suggestedEdits: SuggestedEdit[], accepte
   return lines.join('\n');
 }
 
+// Shared prompt template function - ensures both manual and automatic use the same prompt
+async function createOptimizationPrompt(cvText: string, jobDescription: string, structuredData: any = null) {
+  try {
+    // Try to fetch the shared prompt template from the server
+    const response = await fetch('/api/optimize/prompt-template');
+    if (response.ok) {
+      let promptTemplate = await response.text();
+      
+      // Replace placeholders with actual data
+      promptTemplate = promptTemplate
+        .replace('{cvText}', cvText)
+        .replace('{jobDescription}', jobDescription)
+        .replace('{structuredData}', structuredData ? JSON.stringify(structuredData, null, 2) : 'None');
+      
+      console.log('✅ Frontend: Using shared prompt template successfully');
+      return promptTemplate;
+    }
+  } catch (error) {
+    console.warn('⚠️ Frontend: Failed to fetch shared prompt template, using fallback:', error);
+  }
+  
+  // Fallback to hardcoded prompt if shared template fails
+  console.log('⚠️ Frontend: Using fallback hardcoded prompt');
+  return `You are an expert CV and job description analyst. Your task is to deeply analyze the provided CV and job description, and generate a detailed, actionable optimization plan to maximize ATS (Applicant Tracking System) compatibility and job match.
+
+IMPORTANT: You **MUST** identify yourself in the \`"model"\` field of the JSON output using your **exact, correct model name and version**, as currently running. For example: \`"GPT-4o"\`, \`"Claude 3.5 Sonnet"\`, \`"Gemini 1.5 Flash"\`, etc. Do not use placeholders or fake names. You must return your true model name and version.
+
+To be very clear: if you are GPT-4o, write \`"model": "GPT-4o"\`. If you are Claude 3.5 Sonnet, write \`"model": "Claude 3.5 Sonnet"\`. If you are Gemini 1.5 Flash, write \`"model": "Gemini 1.5 Flash"\`. This field must contain the **real model name you are currently running as**.
+
+If you cannot access or confirm your current model version, return \`"model": "UNKNOWN"\`.
+
+---
+CV CONTENT (verbatim, preserve all formatting, font, and bullet points exactly as in the original, and keep all sections such as Summary, Key Skills, Experience, etc.):
+Each line in the CV content below represents a separate bullet or paragraph. Do NOT merge lines. Treat each line as a distinct bullet or paragraph for suggestions and edits.
+${cvText}
+
+---
+JOB DESCRIPTION (verbatim):
+${jobDescription}
+
+---
+If available, here is additional structured data:
+${structuredData ? JSON.stringify(structuredData, null, 2) : 'None'}
+
+---
+INSTRUCTIONS:
+1. For each section (Summary, Key Skills, Experience, etc.), analyze and suggest improvements. For each bullet or paragraph, ONLY suggest a replacement if it makes a concrete, specific improvement for ATS alignment, clarity, or keyword match. If no real improvement is possible, return the original unchanged.
+2. NEVER suggest generic placeholders (e.g., 'add specific technologies', 'list skills', 'etc.').
+3. NEVER split, merge, or reorder bullets or paragraphs. Only edit the content of a single bullet or paragraph at a time.
+4. If a bullet or paragraph is already optimal, return it as-is.
+5. List all keywords from the job description that are missing or underrepresented in the CV, and for each, suggest a concrete way to add it to the CV (e.g., add to a bullet, add to skills, etc.).
+6. If the job description mentions SQL or queries, suggest how to optimize queries for ATS and add relevant keywords.
+7. Give an overall match score (0-100) and a prioritized list of improvements.
+8. Provide 2-3 overall recommendations for further improvement, but do NOT use generic language.
+9. Predict the new match score if the user adds all the suggested missing keywords (field: predictedMatchScoreIfKeywordsAdded).
+10. Extract and return all available key job details (as much as possible) from the job description, including: company name, location, salary, contract length, job type, and any other relevant details. Return these in a 'jobDetails' field.
+11. PRESERVE ALL FORMATTING, including font, size, bold, italics, underline, color, bullet/numbering, and section headers. Do not change the structure or layout of the document.
+12. IMPORTANT: In the "model" field, include YOUR ACTUAL MODEL NAME AND VERSION (e.g., 'ChatGPT 4o Mini', 'Claude 3.5 Sonnet', 'Gemini 2.0 Flash', 'GPT-4', etc.). Do NOT use placeholder text - use your real model name.
+
+---
+RESPONSE FORMAT (JSON only, no extra text):
+{
+  "model": "REPLACE WITH YOUR ACTUAL MODEL NAME AND VERSION (e.g., 'ChatGPT 4o Mini', 'Claude 3.5 Sonnet', 'Gemini 2.0 Flash', 'GPT-4', 'Bard', etc.)",
+  "matchScore": <calculate a score from 0-100 based on keyword match, experience relevance, and overall fit>,
+  "keywords": ["keyword1", "keyword2"],
+  "keywordSuggestions": [
+    { "keyword": "keyword1", "suggestion": "Add to bullet X in Experience section" }
+  ],
+  "improvements": ["improvement1", "improvement2"],
+  "suggestedEdits": [
+    {
+      "section": "Section name (e.g., Summary, Key Skills, Experience)",
+      "originalBullet": "Original bullet or paragraph from CV",
+      "improvedBullet": "Improved bullet or paragraph with added keywords/skills (must be concrete, not generic)",
+      "reason": "Why this change helps"
+    }
+  ],
+  "overallRecommendations": [
+    "Recommendation 1",
+    "Recommendation 2"
+  ],
+  "predictedMatchScoreIfKeywordsAdded": 95,
+  "jobDetails": {
+    "company": "Company Name",
+    "location": "Location",
+    "salary": "Salary or range",
+    "contractLength": "Contract length or type",
+    "jobType": "Full-time/Part-time/Contract/Remote/Onsite/etc.",
+    "other": "Any other relevant details"
+  }
+}
+
+---
+STRICT RULES:
+- Do NOT invent experience or skills not present in the CV.
+- Do NOT change the order or structure unless required for ATS.
+- Use only the JSON format above. Do NOT include explanations or extra text.
+- Preserve all original formatting, especially bullet points, lists, section headers, and font styles.
+- Do NOT use generic placeholders or vague suggestions. Only concrete, actionable edits are allowed.`
+}
+
 export default function GenerateCVTab({ 
   masterCV, 
   jobDescription, 
@@ -112,6 +215,13 @@ export default function GenerateCVTab({
   const [successFolderPath, setSuccessFolderPath] = useState<string | null>(null);
   const [copyTooltip, setCopyTooltip] = useState<string>('Copy Path');
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
+  const [expandedSuggestions, setExpandedSuggestions] = useState<Set<number>>(new Set());
+  const [showManualOptimization, setShowManualOptimization] = useState(false)
+  const [manualResponse, setManualResponse] = useState('')
+  const [copiedPrompt, setCopiedPrompt] = useState(false)
+  const [showRawResponse, setShowRawResponse] = useState(false)
+  const [isCopyingPrompt, setIsCopyingPrompt] = useState(false)
+  const [lastCopiedPrompt, setLastCopiedPrompt] = useState('')
 
   // Persist suggested edits
   useEffect(() => {
@@ -175,7 +285,15 @@ export default function GenerateCVTab({
       // Handle the response structure - check if it has an 'optimization' key
       const optimizationData = data.optimization || data
       
-      setOptimizationResults(optimizationData)
+      // Extract model information from the response
+      const modelUsed = optimizationData.model || optimizationData.modelUsed || 'Gemini 2.0 Flash'
+      
+      // Add model information to optimization results
+      const optimizationDataWithModel = {
+        ...optimizationData,
+        model: modelUsed
+      };
+      setOptimizationResults(optimizationDataWithModel)
       setSuggestedEdits(optimizationData.suggestedEdits || [])
       setOptimizationProgress(100)
       
@@ -184,21 +302,23 @@ export default function GenerateCVTab({
         toast.error('Gemini returned a generic fallback response. Please check your CV, job description, or try again.');
       }
       
-      // Build the actual Gemini prompt
-      const fullPrompt = `You are an expert CV optimizer specializing in strict ATS (Applicant Tracking System) compliance.\n\nCV Content (Master Data):\n${data.cvText}\n\nJob Description:\n${data.jobDescription}\n\nYour task is to optimize the CV to maximize ATS compatibility for the given job description, while strictly preserving the original structure, sections, and factual content of the master CV. Only make changes that:\n- Improve keyword matching for the job description\n- Enhance ATS parsing (e.g., clear section headings, reverse-chronological order, no tables or graphics)\n- Add or rephrase content for quantifiable achievements, but do NOT invent experience or skills\n- Use industry-standard terminology and action verbs\n- Maintain a professional, concise tone\n- Do NOT remove or alter any factual information from the master CV\n- Do NOT change the order or structure of sections unless required for ATS\n\nChecklist for ATS Compliance (ensure all are met):\n- All sections are clearly labeled (e.g., \"Professional Summary\", \"Experience\", \"Education\", \"Skills\")\n- No graphics, images, or tables\n- Use standard fonts and formatting\n- Use keywords from the job description naturally\n- All dates are in MM/YYYY or YYYY format\n- No spelling or grammar errors\n- No personal pronouns (I, me, my)\n- No confidential or sensitive information\n\nPlease provide a JSON response with the following structure:\n{\n  \"matchScore\": 85,\n  \"keywords\": [\"keyword1\", \"keyword2\"],\n  \"improvements\": [\"improvement1\", \"improvement2\"],\n  \"suggestedEdits\": [\n    {\n      \"section\": \"Professional Summary\",\n      \"original\": \"Original text\",\n      \"suggested\": \"Improved text with keywords\",\n      \"reason\": \"Why this change improves ATS compatibility\"\n    }\n  ],\n  \"overallRecommendations\": [\n    \"Add more quantifiable achievements\",\n    \"Include specific technologies mentioned in JD\",\n    \"Use action verbs consistently\"\n  ]\n}\n\nGuidelines:\n- Strictly preserve the original structure and factual content\n- Only make changes for ATS and job description alignment\n- Add relevant keywords naturally\n- Include quantifiable achievements where possible\n- Use industry-standard terminology\n- Maintain professional tone\n- Focus on ATS-friendly language\n\nReturn only the JSON object, no additional text.`
+      // Get the actual prompt that was sent to the API
+      const actualPrompt = await createOptimizationPrompt(data.cvText, data.jobDescription, data.structuredData)
       
-      // Log to chat history with full prompt
+      // Log to chat history with actual prompt
       setChatHistory(prev => [
         ...prev,
         {
-          question: fullPrompt,
+          question: actualPrompt,
           answer: JSON.stringify(optimizationData, null, 2),
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          model: modelUsed,
+          promptSource: optimizationData.promptSource || 'shared-template'
         }
       ])
       
-      setIsOptimizing(false)
-      toast.success('CV optimization completed!')
+        setIsOptimizing(false)
+        toast.success('CV optimization completed!')
     } catch (error: any) {
       console.error('Optimization failed:', error)
       setError(error.message || 'Optimization failed. Please try again.')
@@ -213,7 +333,7 @@ export default function GenerateCVTab({
     setAcceptedEdits(prev => {
       const newSet = new Set(prev)
       if (newSet.has(index)) {
-        newSet.delete(index)
+      newSet.delete(index)
         toast('Edit unaccepted', { icon: '↩️' })
       } else {
         newSet.add(index)
@@ -221,6 +341,112 @@ export default function GenerateCVTab({
       }
       return newSet
     })
+  }
+
+  const toggleSuggestion = (idx: number) => {
+    setExpandedSuggestions(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  // Manual optimization functions
+  const handleCopyPrompt = async () => {
+    if (!masterCV || !jobDescription.trim()) {
+      toast.error('Please upload a CV and provide a job description first')
+      return
+    }
+
+    setIsCopyingPrompt(true)
+    try {
+      // Extract CV text using the same method as the API
+      const formData = new FormData()
+      formData.append('cv', masterCV)
+      formData.append('jobDescription', jobDescription)
+      
+      const response = await fetch('/api/optimize/optimize-cv', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to extract CV text')
+      }
+      
+      const data = await response.json()
+      const cvText = data.cvText || ''
+      
+      // Use the shared prompt template - ensures consistency with automatic optimization
+      const prompt = await createOptimizationPrompt(cvText, jobDescription, data.structuredData)
+
+      await navigator.clipboard.writeText(prompt)
+      setLastCopiedPrompt(prompt) // Store the actual prompt
+      setCopiedPrompt(true)
+      toast.success('Prompt copied to clipboard!')
+      setTimeout(() => setCopiedPrompt(false), 2000)
+    } catch (error) {
+      toast.error('Failed to copy prompt')
+      console.error('Error copying prompt:', error)
+    } finally {
+      setIsCopyingPrompt(false)
+    }
+  }
+
+  const handlePasteResponse = () => {
+    if (!manualResponse.trim()) {
+      toast.error('Please paste a response first')
+      return
+    }
+
+    try {
+      // Clean the response to handle markdown code blocks
+      let cleanedResponse = manualResponse.trim()
+      
+      // Remove markdown code block markers
+      cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*\n?/i, '') // Remove opening ```json or ```
+      cleanedResponse = cleanedResponse.replace(/\n?```\s*$/i, '') // Remove closing ```
+      
+      // Remove any leading/trailing whitespace
+      cleanedResponse = cleanedResponse.trim()
+      
+      const parsedResponse = JSON.parse(cleanedResponse)
+      
+      // Extract model information from the response
+      const modelUsed = parsedResponse.model || parsedResponse.modelUsed || 'Unknown Model'
+      
+      // Add model information to optimization results
+      const optimizationDataWithModel = {
+        ...parsedResponse,
+        model: modelUsed
+      };
+      
+      setOptimizationResults(optimizationDataWithModel)
+      setSuggestedEdits(parsedResponse.suggestedEdits || [])
+      
+      // Add to chat history with model information from response
+      setChatHistory(prev => [
+        ...prev,
+        {
+          question: lastCopiedPrompt || `Manual optimization using ${modelUsed} - Prompt copied from shared template`,
+          answer: JSON.stringify(parsedResponse, null, 2),
+          timestamp: new Date().toISOString(),
+          model: modelUsed,
+          promptSource: parsedResponse.promptSource || 'manual'
+        }
+      ])
+      
+      // Clear the stored prompt after using it
+      setLastCopiedPrompt('')
+      
+      setShowManualOptimization(false) // Close the manual optimization frame
+      setManualResponse('') // Clear the response textarea
+      setLastCopiedPrompt('') // Clear the stored prompt
+      toast.success('Response processed successfully!')
+    } catch (error) {
+      toast.error('Invalid JSON response. Please check the format.')
+      console.error('Error parsing response:', error)
+    }
   }
 
   // 4. Fix recalculate score button
@@ -284,6 +510,8 @@ export default function GenerateCVTab({
       formData.append('suggestedEdits', JSON.stringify(suggestedEdits))
       formData.append('jobDescription', jobDescription)
       formData.append('userName', userName);
+      // Send model information
+      formData.append('modelUsed', optimizationResults?.model || 'Gemini 2.0 Flash');
       // Send jobDetails if available
       if (optimizationResults && optimizationResults.jobDetails) {
         formData.append('jobDetails', JSON.stringify(optimizationResults.jobDetails));
@@ -298,10 +526,14 @@ export default function GenerateCVTab({
       if (!response.ok || !data.success) {
         throw new Error((data.error || data.message || 'Failed to generate CV') + (data.stack ? '\n' + data.stack : ''))
       }
-      // Do NOT trigger browser download. Only show folder path.
-      setSuccessFolderPath(data.folderPath)
-      toast.success('CV generated and saved!')
-      setIsGenerating(false)
+      // Show the filename and full path separately
+      const fileName = data.downloadName || 'optimized-cv.docx'
+      const fullFilePath = data.savePath || data.folderPath
+      const jdFileName = data.jdFileName || 'job-description.txt'
+      const jdFilePath = data.jdSavePath || data.folderPath
+      setSuccessFolderPath(`${fileName}|${fullFilePath}|${jdFileName}|${jdFilePath}`)
+      toast.success(`CV and JD generated and saved!`)
+        setIsGenerating(false)
     } catch (error: any) {
       setIsGenerating(false)
       setError(error.message || 'Generation failed. Please try again.')
@@ -310,17 +542,27 @@ export default function GenerateCVTab({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Generate Optimized CV</h2>
+    <div className="bg-white rounded-lg shadow p-6 max-w-screen-lg mx-auto">
+      <h2 className="text-xl font-bold mb-4 flex items-center"><Download className="mr-2" /> CV Optimization</h2>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 space-y-4 lg:space-y-0">
+        <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Generate Optimized CV</h2>
+        <div className="flex flex-col lg:flex-row items-center space-y-2 lg:space-y-0 lg:space-x-3 w-full lg:w-auto">
         <button
           onClick={handleOptimize}
-          disabled={!masterCV || !jobDescription.trim() || isOptimizing}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Sparkles className="h-4 w-4 inline mr-2" />
-          {isOptimizing ? 'Optimizing...' : 'Optimize CV'}
+            className={`btn-primary w-full lg:w-auto ${isOptimizing ? 'opacity-80' : ''}`}
+            disabled={isOptimizing || !masterCV || !jobDescription.trim()}
+          >
+            {isOptimizing ? <span className="spinner mr-2"></span> : null}
+            {isOptimizing ? 'Optimizing...' : 'Optimize with AI'}
+          </button>
+          <button
+            onClick={() => setShowManualOptimization(!showManualOptimization)}
+            className={`btn-secondary w-full lg:w-auto ${showManualOptimization ? 'bg-blue-100 text-blue-800' : ''}`}
+            disabled={!masterCV || !jobDescription.trim()}
+          >
+            Manual Optimization
         </button>
+        </div>
       </div>
 
       {!masterCV || !jobDescription.trim() ? (
@@ -358,32 +600,271 @@ export default function GenerateCVTab({
             </div>
           )}
 
-          {optimizationResults && !isOptimizing && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="card text-center">
-                <div className="text-2xl font-bold text-primary-600">{optimizationResults.matchScore || 0}%</div>
-                <div className="text-sm text-gray-600">Match Score</div>
-              </div>
-              <div className="card">
-                <h4 className="font-medium text-gray-900 mb-2">Key Improvements</h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  {Array.isArray(optimizationResults.improvements) && optimizationResults.improvements.map((improvement: string, index: number) => (
-                    <li key={index}>• {improvement}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="card">
-                <h4 className="font-medium text-gray-900 mb-2">Keywords Added</h4>
-                <div className="flex flex-wrap gap-1">
-                  {Array.isArray(optimizationResults.keywords) && optimizationResults.keywords.map((keyword: string, index: number) => (
-                    <span
-                      key={index}
-                      className="bg-primary-100 text-primary-800 px-2 py-1 rounded text-xs"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
+          {optimizationResults && (
+            <div className="space-y-4">
+              {/* Match Score Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900">Match Score</h3>
+                    <p className="text-sm text-blue-700">How well your CV matches the job description</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-blue-600">{optimizationResults.matchScore || 0}%</div>
+                    <div className="text-xs text-blue-500">out of 100</div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Job Details Section */}
+              {optimizationResults.jobDetails && (
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2V6" />
+                        </svg>
+                      </div>
+                      Job Details
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                    {/* Company & Location */}
+                    <div className="space-y-4">
+                      <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                        <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Company</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.company}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-4">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Location</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.location}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Job Type & Contract */}
+                    <div className="space-y-4">
+                      <div className="flex items-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+                        <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Job Type</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.jobType}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-100">
+                        <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-4">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Contract</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.contractLength || 'Not specified'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Salary - Full Width */}
+                  {optimizationResults.jobDetails.salary && (
+                    <div className="mt-6">
+                      <div className="flex items-center p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border border-yellow-100">
+                        <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mr-4">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-yellow-600 uppercase tracking-wide">Salary</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.salary}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Info - Full Width */}
+                  {optimizationResults.jobDetails.other && (
+                    <div className="mt-6">
+                      <div className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start">
+                          <div className="w-10 h-10 bg-gray-500 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">Additional Information</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{optimizationResults.jobDetails.other}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Summary, Keywords, and Raw Response - Side by Side */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Summary Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                      Summary
+                    </h3>
+                  </div>
+                  <div className="text-gray-700 leading-relaxed text-sm">
+                    {optimizationResults.overallRecommendations ? (
+                      <div className="space-y-2">
+                        {Array.isArray(optimizationResults.overallRecommendations) ? 
+                          optimizationResults.overallRecommendations.map((rec: string, i: number) => (
+                            <div key={i} className="p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                              {rec}
+                            </div>
+                          )) :
+                          <div className="p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                            {optimizationResults.overallRecommendations}
+                          </div>
+                        }
+                      </div>
+                    ) : optimizationResults.improvements ? (
+                      <div className="space-y-2">
+                        {Array.isArray(optimizationResults.improvements) ? 
+                          optimizationResults.improvements.map((imp: string, i: number) => (
+                            <div key={i} className="p-2 bg-green-50 rounded border-l-4 border-green-400">
+                              {imp}
+                            </div>
+                          )) :
+                          <div className="p-2 bg-green-50 rounded border-l-4 border-green-400">
+                            {optimizationResults.improvements}
+                          </div>
+                        }
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic">No summary available.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Keywords Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                      Keywords
+                    </h3>
+                    <span className="text-sm text-gray-500">
+                      {Array.isArray(optimizationResults.keywords) ? optimizationResults.keywords.length : 0} found
+                    </span>
+                  </div>
+                  {Array.isArray(optimizationResults.keywords) && optimizationResults.keywords.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {optimizationResults.keywords.map((kw: string, i: number) => (
+                        <span key={i} className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No keywords found.</p>
+                  )}
+              </div>
+
+                {/* Raw Response Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <button
+                    className="w-full text-left flex items-center justify-between font-semibold text-gray-900 hover:text-blue-700 transition-colors"
+                    onClick={() => setShowRawResponse(!showRawResponse)}
+                  >
+                    <span className="flex items-center">
+                      <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                      Raw Response
+                    </span>
+                    <span className="text-xs text-gray-500">{showRawResponse ? '▲' : '▼'}</span>
+                  </button>
+                  {showRawResponse && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto max-h-48 font-mono">
+                        {JSON.stringify(optimizationResults, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Suggestions Section - Full Width */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                    Suggestions
+                  </h3>
+                  <span className="text-sm text-gray-500">
+                    {Array.isArray(optimizationResults.suggestedEdits) ? optimizationResults.suggestedEdits.length : 0} suggestions
+                  </span>
+                </div>
+                {Array.isArray(optimizationResults.suggestedEdits) && optimizationResults.suggestedEdits.length > 0 ? (
+                  <div className="space-y-3">
+                    {optimizationResults.suggestedEdits.map((s: any, i: number) => (
+                      <div key={i} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                        <button
+                          className="w-full text-left flex justify-between items-center font-medium text-gray-900 hover:text-blue-700 transition-colors"
+                          onClick={() => toggleSuggestion(i)}
+                        >
+                          <span className="truncate">{s.improvedBullet || s.suggested}</span>
+                          <span className="ml-2 text-xs text-gray-500 flex-shrink-0">
+                            {expandedSuggestions.has(i) ? '▲' : '▼'}
+                          </span>
+                        </button>
+                        {expandedSuggestions.has(i) && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 space-y-2 text-sm">
+                            <div className="bg-red-50 p-2 rounded">
+                              <span className="font-semibold text-red-800">Original:</span>
+                              <div className="text-red-700 mt-1">{s.originalBullet || s.original}</div>
+                            </div>
+                            <div className="bg-green-50 p-2 rounded">
+                              <span className="font-semibold text-green-800">Improved:</span>
+                              <div className="text-green-700 mt-1">{s.improvedBullet || s.suggested}</div>
+                            </div>
+                            <div className="bg-blue-50 p-2 rounded">
+                              <span className="font-semibold text-blue-800">Reason:</span>
+                              <div className="text-blue-700 mt-1">{s.reason}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">No suggestions found.</p>
+                )}
               </div>
             </div>
           )}
@@ -400,37 +881,25 @@ export default function GenerateCVTab({
             </div>
           )}
 
-          {optimizationResults && optimizationResults.jobDetails && (
-            <div className="card bg-yellow-50 border border-yellow-300 p-4 mb-4 shadow-sm">
-              <h4 className="font-bold text-yellow-900 mb-3 flex items-center"><span className="mr-2">🏢</span> Job Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><span className="font-semibold">Company:</span> {optimizationResults.jobDetails.company || <span className="text-gray-400">N/A</span>}</div>
-                <div><span className="font-semibold">Location:</span> {optimizationResults.jobDetails.location || <span className="text-gray-400">N/A</span>}</div>
-                <div><span className="font-semibold">Salary:</span> {optimizationResults.jobDetails.salary || <span className="text-gray-400">N/A</span>}</div>
-                <div><span className="font-semibold">Contract Length:</span> {optimizationResults.jobDetails.contractLength || <span className="text-gray-400">N/A</span>}</div>
-                <div><span className="font-semibold">Job Type:</span> {optimizationResults.jobDetails.jobType || <span className="text-gray-400">N/A</span>}</div>
-                <div><span className="font-semibold">Other:</span> {optimizationResults.jobDetails.other || <span className="text-gray-400">N/A</span>}</div>
-              </div>
-            </div>
-          )}
+
 
           {Array.isArray(suggestedEdits) && suggestedEdits.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Suggested Edits</h3>
+              <h3 className="text-lg font-medium text-gray-900">Suggested Edits</h3>
                 <div className="flex items-center space-x-4">
                   <div className="text-sm text-gray-600">
                     Accepted: {acceptedEdits.size} of {suggestedEdits.length}
                   </div>
                   <button
                     onClick={() => setAcceptedEdits(new Set(suggestedEdits.map((_, index) => index)))}
-                    className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                    className="btn-secondary"
                   >
                     Accept All
                   </button>
                   <button
                     onClick={() => setAcceptedEdits(new Set())}
-                    className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    className="btn-secondary"
                   >
                     Clear All
                   </button>
@@ -438,7 +907,8 @@ export default function GenerateCVTab({
               </div>
               <button
                 onClick={handleRecalculate}
-                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm mb-2"
+                className="btn-secondary"
+                disabled={isOptimizing || isGenerating}
               >
                 Recalculate Match Score
               </button>
@@ -471,7 +941,7 @@ export default function GenerateCVTab({
                       {edit.improvedBullet ? (
                         <div className="bg-green-100 text-green-800 rounded px-1 mb-2">
                           {edit.improvedBullet}
-                        </div>
+                      </div>
                       ) : (
                         <div className="bg-green-100 text-green-800 rounded px-1 mb-2">
                           {edit.suggested}
@@ -499,49 +969,101 @@ export default function GenerateCVTab({
           )}
 
           {suggestedEdits.length > 0 && (
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end">
               <button
                 onClick={handleGenerateCV}
-                disabled={isGenerating}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`btn-primary w-full lg:w-auto ${isGenerating ? 'opacity-80' : ''}`}
+                disabled={isGenerating || suggestedEdits.length === 0}
               >
-                <Download className="h-4 w-4 inline mr-2" />
-                {isGenerating ? 'Generating CV...' : 'Generate Optimized CV'}
+                {isGenerating ? <span className="spinner mr-2"></span> : null}
+                {isGenerating ? 'Generating...' : 'Generate Optimized CV'}
               </button>
-            </div>
+                </div>
           )}
           {successFolderPath && (
-            <div className="bg-green-50 border border-green-300 text-green-900 rounded p-3 mb-4 flex items-center justify-between">
-              <span><strong>Resume saved in:</strong> {successFolderPath}</span>
-              <button
-                className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 text-sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(successFolderPath);
-                  setCopyTooltip('Copied!');
-                  setTimeout(() => setCopyTooltip('Copy Path'), 2000);
-                }}
-                title={copyTooltip}
-              >
-                {copyTooltip}
-              </button>
+            <div className="bg-green-50 border border-green-300 text-green-900 rounded p-3 mb-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-3 space-y-2 lg:space-y-0">
+                <span className="font-semibold">✅ CV and JD Generated Successfully!</span>
+                <button
+                  className="px-3 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 text-sm w-full lg:w-auto"
+                  onClick={() => {
+                    const folderPath = successFolderPath.split('|')[1].split('\\').slice(0, -1).join('\\') || successFolderPath.split('|')[1].split('/').slice(0, -1).join('/');
+                    navigator.clipboard.writeText(folderPath);
+                    toast.success('Folder path copied!');
+                  }}
+                  title="Copy folder path"
+                >
+                  📁 Copy Folder Path
+                </button>
+              </div>
+              <div className="text-sm space-y-3">
+                {/* CV File */}
+                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-2 space-y-2 lg:space-y-0">
+                    <div className="font-medium text-blue-800">📄 CV File:</div>
+                    <button
+                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 text-xs w-full lg:w-auto"
+                      onClick={() => {
+                        const cvPath = successFolderPath.split('|')[1];
+                        navigator.clipboard.writeText(cvPath);
+                        toast.success('CV path copied!');
+                      }}
+                    >
+                      📋 Copy Path
+                    </button>
+                  </div>
+                  <div className="mb-1">
+                    <span className="font-medium">File:</span> 
+                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border break-all">{successFolderPath.split('|')[0]}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Path:</span> 
+                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border text-xs break-all">{successFolderPath.split('|')[1] || successFolderPath}</span>
+                  </div>
+                </div>
+                
+                {/* JD File */}
+                <div className="bg-green-50 p-3 rounded border border-green-200">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-2 space-y-2 lg:space-y-0">
+                    <div className="font-medium text-green-800">📋 Job Description:</div>
+                    <button
+                      className="px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 text-xs w-full lg:w-auto"
+                      onClick={() => {
+                        const jdPath = successFolderPath.split('|')[3];
+                        navigator.clipboard.writeText(jdPath);
+                        toast.success('JD path copied!');
+                      }}
+                    >
+                      📋 Copy Path
+                    </button>
+                  </div>
+                  <div className="mb-1">
+                    <span className="font-medium">File:</span> 
+                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border break-all">{successFolderPath.split('|')[2]}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Path:</span> 
+                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border text-xs break-all">{successFolderPath.split('|')[3] || successFolderPath}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
       )}
-      {/* Add a field for user name */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Your Name (for file naming)</label>
-        <input
-          type="text"
-          className="input-field w-full"
-          value={userName}
-          onChange={e => {
-            setUserName(e.target.value);
-            localStorage.setItem('userName', e.target.value);
-          }}
-          placeholder="e.g. Binson Sam Thomas"
-        />
-      </div>
+
+      {/* Manual Optimization Modal */}
+      <ManualOptimizationModal
+        open={showManualOptimization}
+        onClose={() => setShowManualOptimization(false)}
+        onCopyPrompt={handleCopyPrompt}
+        onPasteResponse={handlePasteResponse}
+        manualResponse={manualResponse}
+        setManualResponse={setManualResponse}
+        copiedPrompt={copiedPrompt}
+        isCopyingPrompt={isCopyingPrompt}
+        disabled={!masterCV || !jobDescription.trim()}
+      />
     </div>
   )
-}
+} 

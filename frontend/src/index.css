@@ -2,6 +2,113 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  /* Prevent horizontal scrolling */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Improve touch targets */
+  button, input, textarea, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing for mobile */
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Mobile-friendly sidebar */
+  .mobile-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .mobile-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  /* Desktop sidebar collapse */
+  .sidebar-collapsed {
+    width: 0 !important;
+    overflow: hidden;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Compact sidebar styles */
+  .sidebar-compact {
+    width: 4rem !important;
+  }
+  
+  .sidebar-compact .sidebar-content {
+    display: none;
+  }
+  
+  /* Smooth sidebar transitions */
+  .sidebar-transition {
+    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
+  }
+  
+  /* Mobile overlay */
+  .mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+  }
+  
+  /* Mobile-friendly modals */
+  .mobile-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  .btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+  
+  /* Better spacing for touch */
+  .touch-spacing > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Mobile-friendly input fields */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Mobile-friendly cards */
+  .card {
+    margin: 0.5rem;
+    border-radius: 0.75rem;
+  }
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -14,11 +121,15 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-gray-200 text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-danger {
+    @apply bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .card {
@@ -35,5 +146,55 @@
   
   .tab-inactive {
     @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+  }
+
+  .spinner {
+    @apply animate-spin inline-block w-5 h-5 border-2 border-t-2 border-gray-200 border-t-blue-600 rounded-full;
+    border-right-color: transparent;
+  }
+
+  /* Document preview styles */
+  .document-preview h1 {
+    @apply text-2xl font-bold text-gray-900 mb-4;
+  }
+
+  .document-preview h2 {
+    @apply text-xl font-semibold text-gray-800 mb-3 mt-6;
+  }
+
+  .document-preview h3 {
+    @apply text-lg font-medium text-gray-700 mb-2 mt-4;
+  }
+
+  .document-preview p {
+    @apply text-gray-700 mb-2 leading-relaxed;
+  }
+
+  .document-preview ul, .document-preview ol {
+    @apply mb-3 ml-6;
+  }
+
+  .document-preview li {
+    @apply text-gray-700 mb-1;
+  }
+
+  .document-preview strong, .document-preview b {
+    @apply font-semibold text-gray-900;
+  }
+
+  .document-preview em, .document-preview i {
+    @apply italic text-gray-700;
+  }
+
+  .document-preview table {
+    @apply w-full border-collapse border border-gray-300 mb-4;
+  }
+
+  .document-preview th, .document-preview td {
+    @apply border border-gray-300 px-3 py-2 text-sm;
+  }
+
+  .document-preview th {
+    @apply bg-gray-100 font-semibold text-gray-900;
   }
 } 

@@ -19,7 +19,7 @@ Your task is to analyze the CV against the job description and provide specific,
 Please provide a JSON response with the following structure:
 
 {
-  "matchScore": 85,
+  "matchScore": <calculate a score from 0-100 based on keyword match, experience relevance, and overall fit>,
   "keywords": ["keyword1", "keyword2"],
   "improvements": ["improvement1", "improvement2"],
   "suggestedEdits": [

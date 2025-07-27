@@ -4,9 +4,16 @@ import MasterDataTab from './components/MasterDataTab'
 import JobDescriptionTab from './components/JobDescriptionTab'
 import GenerateCVTab from './components/GenerateCVTab'
 import GeminiChatHistory, { ChatEntry } from './components/GeminiChatHistory';
-import SettingsTab from './components/SettingsTab';
+import SettingsModal from './components/SettingsModal';
+import Sidebar from './components/Sidebar';
 
-type TabType = 'master' | 'job' | 'generate' | 'settings'
+interface Todo {
+  id: string;
+  content: string;
+  status: 'pending' | 'completed' | 'cancelled';
+}
+
+type TabType = 'master' | 'job' | 'generate'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -34,6 +41,14 @@ export default function App() {
     const saved = localStorage.getItem('optimizationResults');
     return saved ? JSON.parse(saved) : null;
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('isSidebarCollapsed');
+    return saved === 'true';
+  });
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
+  const [resumeFolder, setResumeFolder] = useState(() => localStorage.getItem('resumeFolder') || '');
+  const [todos, setTodos] = useState<Todo[]>([]);
 
   // Persist active tab
   useEffect(() => {
@@ -69,6 +84,11 @@ export default function App() {
     }
   }, [optimizationResults]);
 
+  // Persist sidebar collapsed state
+  useEffect(() => {
+    localStorage.setItem('isSidebarCollapsed', isSidebarCollapsed.toString());
+  }, [isSidebarCollapsed]);
+
   // Persist masterCV (file) name in localStorage (file objects can't be stored, so just store name for preview)
   useEffect(() => {
     if (masterCV) {
@@ -86,9 +106,6 @@ export default function App() {
 
   // Clear chat handler
   const handleClearChat = () => setChatHistory([]);
-
-  // Back to main handler
-  const handleBackToMain = () => setShowHistory(false);
 
   // Clear master data handler
   const handleClearMasterData = () => {
@@ -164,7 +181,8 @@ export default function App() {
       // Preserve settings
       const preserve = {
         resumeFolder: localStorage.getItem('resumeFolder'),
-        userName: localStorage.getItem('userName')
+        userName: localStorage.getItem('userName'),
+        isSidebarCollapsed: localStorage.getItem('isSidebarCollapsed')
       };
       setMasterCV(null);
       setStructuredData({ skills: [], experience: [], education: [] });
@@ -178,9 +196,32 @@ export default function App() {
       // Restore settings
       if (preserve.resumeFolder) localStorage.setItem('resumeFolder', preserve.resumeFolder);
       if (preserve.userName) localStorage.setItem('userName', preserve.userName);
+      if (preserve.isSidebarCollapsed) localStorage.setItem('isSidebarCollapsed', preserve.isSidebarCollapsed);
       alert('All data cleared. Your output folder and name settings are preserved, but you need to re-upload your CV and job description.');
     }
   };
+
+  // Toggle sidebar
+  const handleToggleSidebar = () => {
+    const newState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newState);
+    // Show a brief notification
+    const message = newState ? 'Sidebar collapsed' : 'Sidebar expanded';
+    console.log(message); // You can replace this with a toast notification if you have one
+  };
+
+  // Keyboard shortcut for sidebar toggle (Ctrl/Cmd + B)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        handleToggleSidebar();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSidebarCollapsed]);
 
   // Example: Call this when you send a question and receive an answer from Gemini
   // function handleGeminiInteraction(question: string, answer: string) {
@@ -208,155 +249,79 @@ export default function App() {
       name: 'Generate CV',
       icon: Download,
       description: 'Optimize and download your CV'
-    },
-    {
-      id: 'settings' as TabType,
-      name: 'Settings',
-      icon: Settings,
-      description: 'Configure output folder and preferences'
     }
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {!showHistory && (
-        <button
-          className="fixed top-4 right-4 z-50 bg-primary-600 text-white px-4 py-2 rounded shadow"
-          onClick={() => setShowHistory(true)}
-        >
-          Show Gemini Chat History
-        </button>
-      )}
-      {showHistory ? (
-        <GeminiChatHistory chatHistory={chatHistory} onClearChat={handleClearChat} onBackToMain={handleBackToMain} />
-      ) : (
-        <>
-          {/* Header */}
-          <header className="bg-white shadow-sm border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center py-6">
-                <div className="flex items-center">
-                  <Settings className="h-8 w-8 text-primary-600 mr-3" />
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    ATS Resume Optimizer
-                  </h1>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm text-gray-500">
-                    AI-Powered CV Optimization
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handleExportData}
-                      className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
-                      title="Export all data"
-                    >
-                      Export Data
-                    </button>
-                    <label className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 cursor-pointer">
-                      Import Data
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={handleImportData}
-                        className="hidden"
-                      />
-                    </label>
-                    <button
-                      onClick={handleClearAllData}
-                      className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
-                      title="Clear all data"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Navigation Tabs */}
-          <nav className="bg-white border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex space-x-8">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center px-3 py-4 text-sm font-medium rounded-t-lg transition-colors duration-200 ${
-                        activeTab === tab.id ? 'tab-active' : 'tab-inactive'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5 mr-2" />
-                      {tab.name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </nav>
-
-          {/* Main Content */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Data Persistence Status */}
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-4">
-                  <span className="text-blue-800 font-medium">Data Persistence Status:</span>
-                  <span className={`px-2 py-1 rounded text-xs ${chatHistory.length > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                    Chat History: {chatHistory.length} entries
-                  </span>
-                  <span className={`px-2 py-1 rounded text-xs ${jobDescription ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                    Job Description: {jobDescription ? 'Saved' : 'Not saved'}
-                  </span>
-                  <span className={`px-2 py-1 rounded text-xs ${masterCVName ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                    CV File: {masterCVName ? 'Saved' : 'Not saved'}
-                  </span>
-                  <span className={`px-2 py-1 rounded text-xs ${optimizationResults ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                    Optimization: {optimizationResults ? 'Saved' : 'Not saved'}
-                  </span>
-                </div>
-                <div className="text-blue-600 text-xs">
-                  All data is automatically saved to reduce Gemini API calls
-                </div>
-              </div>
-            </div>
-            
-            <div className="card">
-              {activeTab === 'master' && (
-                <MasterDataTab
-                  masterCV={masterCV}
-                  setMasterCV={setMasterCV}
-                  structuredData={structuredData}
-                  setStructuredData={setStructuredData}
-                  masterCVName={masterCVName}
-                  masterCVSize={masterCVSize}
-                  onClearMasterData={handleClearMasterData}
-                />
-              )}
-              {activeTab === 'job' && (
-                <JobDescriptionTab
-                  jobDescription={jobDescription}
-                  setJobDescription={setJobDescription}
-                  setChatHistory={setChatHistory}
-                />
-              )}
-              {activeTab === 'generate' && (
-                <GenerateCVTab
-                  masterCV={masterCV}
-                  jobDescription={jobDescription}
-                  optimizationResults={optimizationResults}
-                  setOptimizationResults={setOptimizationResults}
-                  setChatHistory={setChatHistory}
-                />
-              )}
-              {activeTab === 'settings' && <SettingsTab />}
-            </div>
-          </main>
-        </>
-      )}
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        onExport={handleExportData}
+        onImport={handleImportData}
+        onClearAll={handleClearAllData}
+        onSettings={() => setSettingsOpen(true)}
+        onShowHistory={() => setShowHistory(true)}
+        userName={userName}
+        resumeFolder={resumeFolder}
+        chatHistoryCount={chatHistory.length}
+        jobDescriptionSaved={!!jobDescription}
+        cvFileSaved={!!masterCVName}
+        optimizationSaved={!!optimizationResults}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebar={handleToggleSidebar}
+      />
+      <div className={`flex-1 flex flex-col min-w-0 lg:transition-all lg:duration-300`}>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 md:p-12 bg-gray-50 mobile-padding">
+          <div className="max-w-7xl mx-auto">
+            {activeTab === 'master' && (
+              <MasterDataTab
+                masterCV={masterCV}
+                setMasterCV={setMasterCV}
+                structuredData={structuredData}
+                setStructuredData={setStructuredData}
+                masterCVName={masterCVName}
+                masterCVSize={masterCVSize}
+                onClearMasterData={handleClearMasterData}
+              />
+            )}
+            {activeTab === 'job' && (
+              <JobDescriptionTab
+                jobDescription={jobDescription}
+                setJobDescription={setJobDescription}
+                setChatHistory={setChatHistory}
+              />
+            )}
+            {activeTab === 'generate' && (
+              <GenerateCVTab
+                masterCV={masterCV}
+                jobDescription={jobDescription}
+                optimizationResults={optimizationResults}
+                setOptimizationResults={setOptimizationResults}
+                setChatHistory={setChatHistory}
+              />
+            )}
+          </div>
+        </main>
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          initialUserName={userName}
+          initialResumeFolder={resumeFolder}
+          onSave={({ userName, resumeFolder }) => {
+            setUserName(userName);
+            setResumeFolder(resumeFolder);
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('resumeFolder', resumeFolder);
+          }}
+        />
+        <GeminiChatHistory
+          open={showHistory}
+          onClose={() => setShowHistory(false)}
+          chatHistory={chatHistory}
+          onClearChat={handleClearChat}
+        />
+      </div>
     </div>
-  )
+  );
 } 

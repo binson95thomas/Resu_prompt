@@ -1,5 +1,5 @@
 @echo off
-echo 🚀 Setting up ATS Resume Optimizer...
+echo 🚀 Setting up ResuPrompt...
 
 REM Check if Node.js is installed
 node --version >nul 2>&1

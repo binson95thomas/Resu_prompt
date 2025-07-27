@@ -1,7 +1,7 @@
 {
-  "name": "ats-resume-optimizer-backend",
+  "name": "resuprompt-backend",
   "version": "1.0.0",
-  "description": "Backend server for ATS Resume Optimizer",
+  "description": "Backend server for ResuPrompt",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -23,12 +23,12 @@
     "jest": "^29.7.0"
   },
   "keywords": [
-    "ats",
     "resume",
-    "optimizer",
+    "prompt",
     "ai",
-    "gemini"
+    "optimization",
+    "ats"
   ],
-  "author": "ATS Resume Optimizer Team",
+  "author": "ResuPrompt Team",
   "license": "MIT"
 } 

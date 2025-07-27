@@ -1,7 +1,7 @@
 {
-  "name": "ats-resume-optimizer",
+  "name": "resuprompt",
   "version": "1.0.0",
-  "description": "Full-stack ATS Resume Optimizer with AI-powered CV optimization",
+  "description": "Full-stack ResuPrompt with AI-powered CV optimization",
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:docservice\"",
@@ -18,14 +18,14 @@
     "concurrently": "^8.2.2"
   },
   "keywords": [
-    "ats",
     "resume",
-    "optimizer",
+    "prompt",
     "ai",
-    "gemini",
+    "optimization",
+    "ats",
     "cv",
     "job-description"
   ],
-  "author": "ATS Resume Optimizer Team",
+  "author": "ResuPrompt Team",
   "license": "MIT"
 } 

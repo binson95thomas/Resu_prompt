@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import { Upload, FileText, User, GraduationCap, Briefcase } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
+import FilePreview from './FilePreview';
 
 interface MasterDataTabProps {
   masterCV: File | null
@@ -159,148 +160,75 @@ export default function MasterDataTab({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Master Data</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setActiveSection('cv')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeSection === 'cv' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            <FileText className="h-4 w-4 inline mr-2" />
-            CV Upload
-          </button>
-          <button
-            onClick={() => setActiveSection('structured')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeSection === 'structured' ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            <User className="h-4 w-4 inline mr-2" />
-            Structured Data
-          </button>
-        </div>
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Master CV Upload</h2>
+        <p className="text-gray-600 text-sm">
+          Upload your master CV in .docx format. This will be used as the base template for optimization.
+        </p>
       </div>
-
-      {activeSection === 'cv' && (
-        <div className="space-y-4">
-          <div className="text-gray-600">
-            Upload your master CV in .docx format. This will be used as the base template for optimization.
-          </div>
-          <div className="flex items-center space-x-4">
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                isDragActive ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-primary-400'
-              }`}
-              style={{ minWidth: 280 }}
-            >
-              <input {...getInputProps()} />
-              <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+      
+      <div className="space-y-4">
+        {/* File upload area */}
+        <div className="flex flex-col lg:flex-row items-center space-y-4 lg:space-y-0 lg:space-x-4">
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-lg p-4 lg:p-6 text-center cursor-pointer transition-all duration-200 flex-1 w-full ${
+              isDragActive 
+                ? 'border-blue-500 bg-blue-50 shadow-md' 
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+            }`}
+          >
+            <input {...getInputProps()} />
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Upload className="h-6 w-6 text-blue-600" />
+              </div>
+              
               {masterCV || masterCVName ? (
-                <div>
-                  <p className="text-lg font-medium text-gray-900">CV Uploaded</p>
-                  <p className="text-sm text-gray-500">{masterCV ? masterCV.name : masterCVName}</p>
+                <div className="text-left">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">CV Uploaded</p>
+                  </div>
+                  <p className="text-xs text-gray-600 font-mono truncate">{masterCV ? masterCV.name : masterCVName}</p>
                   {masterCVSize && (
-                    <p className="text-xs text-gray-400">Size: {Math.round(Number(masterCVSize) / 1024)} KB</p>
+                    <p className="text-xs text-gray-500">Size: {Math.round(Number(masterCVSize) / 1024)} KB</p>
                   )}
                 </div>
               ) : (
-                <div>
-                  <p className="text-lg font-medium text-gray-900">
-                    {isDragActive ? 'Drop the CV here' : 'Drag & drop your CV here'}
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isDragActive ? 'Drop your CV here' : 'Drag & drop your CV here'}
                   </p>
-                  <p className="text-sm text-gray-500">or click to browse</p>
+                  <p className="text-xs text-gray-500">or click to browse files</p>
                 </div>
               )}
             </div>
-            {(masterCV || masterCVName) && (
-              <button
-                className="ml-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow"
-                onClick={onClearMasterData}
-              >
-                Clear Master Data
-              </button>
-            )}
           </div>
+          
+          {(masterCV || masterCVName) && (
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-sm transition-colors duration-200 flex items-center space-x-2 text-sm w-full lg:w-auto"
+              onClick={onClearMasterData}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Clear</span>
+            </button>
+          )}
         </div>
-      )}
-
-      {activeSection === 'structured' && (
-        <div className="space-y-6">
-          <div className="text-gray-600">
-            Add structured data to enhance your CV optimization. This data will be used alongside your uploaded CV.
-          </div>
-
-          {/* Skills Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <Briefcase className="h-5 w-5 mr-2" />
-                Skills
-              </h3>
-              <button onClick={addSkill} className="btn-primary text-sm">
-                Add Skill
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {structuredData.skills.map((skill: string, index: number) => (
-                <span
-                  key={index}
-                  className="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Experience Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <Briefcase className="h-5 w-5 mr-2" />
-                Experience
-              </h3>
-              <button onClick={addExperience} className="btn-primary text-sm">
-                Add Experience
-              </button>
-            </div>
-            <div className="space-y-3">
-              {structuredData.experience.map((exp: any, index: number) => (
-                <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                  <div className="font-medium">{exp.title}</div>
-                  <div className="text-sm text-gray-600">{exp.company} • {exp.duration}</div>
-                  <div className="text-sm text-gray-700 mt-1">{exp.description}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Education Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                <GraduationCap className="h-5 w-5 mr-2" />
-                Education
-              </h3>
-              <button onClick={addEducation} className="btn-primary text-sm">
-                Add Education
-              </button>
-            </div>
-            <div className="space-y-3">
-              {structuredData.education.map((edu: any, index: number) => (
-                <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                  <div className="font-medium">{edu.degree}</div>
-                  <div className="text-sm text-gray-600">{edu.institution} • {edu.year}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+        
+        {/* Preview area */}
+        <div className="min-h-[400px]">
+          <FilePreview file={masterCV} />
         </div>
-      )}
+      </div>
     </div>
   )
 } 
