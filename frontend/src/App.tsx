@@ -46,8 +46,45 @@ export default function App() {
     const saved = localStorage.getItem('isSidebarCollapsed');
     return saved === 'true';
   });
-  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
-  const [resumeFolder, setResumeFolder] = useState(() => localStorage.getItem('resumeFolder') || '');
+  // Load settings with fallback to individual localStorage items
+  const loadSettings = () => {
+    const settingsData = localStorage.getItem('resuPromptSettings');
+    if (settingsData) {
+      try {
+        const settings = JSON.parse(settingsData);
+        return {
+          userName: settings.userName || localStorage.getItem('userName') || '',
+          resumeFolder: settings.resumeFolder || localStorage.getItem('resumeFolder') || '',
+          apiHitLimit: settings.apiHitLimit || parseInt(localStorage.getItem('apiHitLimit') || '50'),
+          apiHitsUsed: settings.apiHitsUsed || parseInt(localStorage.getItem('apiHitsUsed') || '0'),
+          apiResetTime: settings.apiResetTime || localStorage.getItem('apiResetTime') || '00:00',
+          apiResetFrequency: settings.apiResetFrequency || localStorage.getItem('apiResetFrequency') || 'daily'
+        };
+      } catch (error) {
+        console.warn('Failed to parse settings, using fallback values');
+      }
+    }
+    return {
+      userName: localStorage.getItem('userName') || '',
+      resumeFolder: localStorage.getItem('resumeFolder') || '',
+      apiHitLimit: parseInt(localStorage.getItem('apiHitLimit') || '50'),
+      apiHitsUsed: parseInt(localStorage.getItem('apiHitsUsed') || '0'),
+      apiResetTime: localStorage.getItem('apiResetTime') || '00:00',
+      apiResetFrequency: localStorage.getItem('apiResetFrequency') || 'daily'
+    };
+  };
+
+  const initialSettings = loadSettings();
+  const [userName, setUserName] = useState(initialSettings.userName);
+  const [resumeFolder, setResumeFolder] = useState(initialSettings.resumeFolder);
+  const [apiHitLimit, setApiHitLimit] = useState(initialSettings.apiHitLimit);
+  const [apiHitsUsed, setApiHitsUsed] = useState(initialSettings.apiHitsUsed);
+  const [apiResetTime, setApiResetTime] = useState(initialSettings.apiResetTime);
+  const [apiResetFrequency, setApiResetFrequency] = useState(initialSettings.apiResetFrequency);
+  const [apiLastReset, setApiLastReset] = useState(() => {
+    const saved = localStorage.getItem('apiLastReset');
+    return saved ? new Date(saved) : new Date();
+  });
   const [todos, setTodos] = useState<Todo[]>([]);
 
   // Persist active tab
@@ -88,6 +125,36 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('isSidebarCollapsed', isSidebarCollapsed.toString());
   }, [isSidebarCollapsed]);
+
+  // Persist API tracking state
+  useEffect(() => {
+    localStorage.setItem('apiHitLimit', apiHitLimit.toString());
+  }, [apiHitLimit]);
+
+  useEffect(() => {
+    localStorage.setItem('apiHitsUsed', apiHitsUsed.toString());
+  }, [apiHitsUsed]);
+
+  useEffect(() => {
+    localStorage.setItem('apiResetTime', apiResetTime);
+  }, [apiResetTime]);
+
+  useEffect(() => {
+    localStorage.setItem('apiResetFrequency', apiResetFrequency);
+  }, [apiResetFrequency]);
+
+  useEffect(() => {
+    localStorage.setItem('apiLastReset', apiLastReset.toISOString());
+  }, [apiLastReset]);
+
+  // Persist user settings
+  useEffect(() => {
+    localStorage.setItem('userName', userName);
+  }, [userName]);
+
+  useEffect(() => {
+    localStorage.setItem('resumeFolder', resumeFolder);
+  }, [resumeFolder]);
 
   // Persist masterCV (file) name in localStorage (file objects can't be stored, so just store name for preview)
   useEffect(() => {
@@ -132,6 +199,15 @@ export default function App() {
       optimizationResults,
       masterCVName,
       masterCVSize,
+      // Include settings in export
+      settings: {
+        userName,
+        resumeFolder,
+        apiHitLimit,
+        apiHitsUsed,
+        apiResetTime,
+        apiResetFrequency
+      },
       timestamp: new Date().toISOString()
     };
     
@@ -163,6 +239,28 @@ export default function App() {
         if (data.jobDescription) setJobDescription(data.jobDescription);
         if (data.optimizationResults) setOptimizationResults(data.optimizationResults);
         
+        // Import settings if available
+        if (data.settings) {
+          setUserName(data.settings.userName || '');
+          setResumeFolder(data.settings.resumeFolder || '');
+          setApiHitLimit(data.settings.apiHitLimit || 50);
+          setApiHitsUsed(data.settings.apiHitsUsed || 0);
+          setApiResetTime(data.settings.apiResetTime || '00:00');
+          setApiResetFrequency(data.settings.apiResetFrequency || 'daily');
+          
+          // Save settings to localStorage
+          const settings = {
+            userName: data.settings.userName || '',
+            resumeFolder: data.settings.resumeFolder || '',
+            apiHitLimit: data.settings.apiHitLimit || 50,
+            apiHitsUsed: data.settings.apiHitsUsed || 0,
+            apiResetTime: data.settings.apiResetTime || '00:00',
+            apiResetFrequency: data.settings.apiResetFrequency || 'daily',
+            lastUpdated: new Date().toISOString()
+          };
+          localStorage.setItem('resuPromptSettings', JSON.stringify(settings));
+        }
+        
         // Note: File objects can't be imported, but we can restore the name/size info
         if (data.masterCVName) localStorage.setItem('masterCVName', data.masterCVName);
         if (data.masterCVSize) localStorage.setItem('masterCVSize', data.masterCVSize);
@@ -178,12 +276,10 @@ export default function App() {
   // Clear all data
   const handleClearAllData = () => {
     if (confirm('This will clear ALL data including chat history. Are you sure?')) {
-      // Preserve settings
-      const preserve = {
-        resumeFolder: localStorage.getItem('resumeFolder'),
-        userName: localStorage.getItem('userName'),
-        isSidebarCollapsed: localStorage.getItem('isSidebarCollapsed')
-      };
+      // Preserve settings from the dedicated settings object
+      const settingsData = localStorage.getItem('resuPromptSettings');
+      const currentSettings = settingsData ? JSON.parse(settingsData) : {};
+      
       setMasterCV(null);
       setStructuredData({ skills: [], experience: [], education: [] });
       setOptimizationResults(null);
@@ -191,13 +287,22 @@ export default function App() {
       setChatHistory([]);
       setActiveTab('master');
       setShowHistory(false);
-      // Clear all localStorage
-      localStorage.clear();
-      // Restore settings
-      if (preserve.resumeFolder) localStorage.setItem('resumeFolder', preserve.resumeFolder);
-      if (preserve.userName) localStorage.setItem('userName', preserve.userName);
-      if (preserve.isSidebarCollapsed) localStorage.setItem('isSidebarCollapsed', preserve.isSidebarCollapsed);
-      alert('All data cleared. Your output folder and name settings are preserved, but you need to re-upload your CV and job description.');
+      
+      // Clear all localStorage except settings
+      const keysToPreserve = ['resuPromptSettings', 'isSidebarCollapsed'];
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(key => {
+        if (!keysToPreserve.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Ensure settings are properly saved
+      if (Object.keys(currentSettings).length > 0) {
+        localStorage.setItem('resuPromptSettings', JSON.stringify(currentSettings));
+      }
+      
+      alert('All data cleared. Your settings are preserved, but you need to re-upload your CV and job description.');
     }
   };
 
@@ -208,6 +313,70 @@ export default function App() {
     // Show a brief notification
     const message = newState ? 'Sidebar collapsed' : 'Sidebar expanded';
     console.log(message); // You can replace this with a toast notification if you have one
+  };
+
+  // Check if API hits should be reset based on time
+  const checkApiReset = () => {
+    if (apiResetFrequency === 'never') return;
+
+    const now = new Date();
+    const lastReset = new Date(apiLastReset);
+    const [resetHour, resetMinute] = apiResetTime.split(':').map(Number);
+    
+    let shouldReset = false;
+    
+    switch (apiResetFrequency) {
+      case 'daily':
+        // Reset if it's past the reset time and a day has passed
+        const resetTimeToday = new Date(now);
+        resetTimeToday.setHours(resetHour, resetMinute, 0, 0);
+        
+        const resetTimeYesterday = new Date(resetTimeToday);
+        resetTimeYesterday.setDate(resetTimeYesterday.getDate() - 1);
+        
+        shouldReset = now >= resetTimeToday && lastReset < resetTimeYesterday;
+        break;
+        
+      case 'weekly':
+        // Reset if it's been a week since last reset and it's past reset time
+        const weekAgo = new Date(lastReset);
+        weekAgo.setDate(weekAgo.getDate() + 7);
+        shouldReset = now >= weekAgo;
+        break;
+        
+      case 'monthly':
+        // Reset if it's been a month since last reset and it's past reset time
+        const monthAgo = new Date(lastReset);
+        monthAgo.setMonth(monthAgo.getMonth() + 1);
+        shouldReset = now >= monthAgo;
+        break;
+    }
+    
+    if (shouldReset) {
+      setApiHitsUsed(0);
+      setApiLastReset(now);
+      localStorage.setItem('apiHitsUsed', '0');
+      localStorage.setItem('apiLastReset', now.toISOString());
+    }
+  };
+
+  // Check for reset on component mount and every minute
+  useEffect(() => {
+    checkApiReset();
+    const interval = setInterval(checkApiReset, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [apiResetFrequency, apiResetTime, apiLastReset]);
+
+  // Increment API hits
+  const incrementApiHits = () => {
+    // Check for reset before incrementing
+    checkApiReset();
+    
+    setApiHitsUsed(prev => {
+      const newValue = prev + 1;
+      localStorage.setItem('apiHitsUsed', newValue.toString());
+      return newValue;
+    });
   };
 
   // Keyboard shortcut for sidebar toggle (Ctrl/Cmd + B)
@@ -268,8 +437,13 @@ export default function App() {
         jobDescriptionSaved={!!jobDescription}
         cvFileSaved={!!masterCVName}
         optimizationSaved={!!optimizationResults}
+        optimizationScore={optimizationResults?.matchScore || 0}
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebar={handleToggleSidebar}
+        apiHitLimit={apiHitLimit}
+        apiHitsUsed={apiHitsUsed}
+        apiResetTime={apiResetTime}
+        apiResetFrequency={apiResetFrequency}
       />
       <div className={`flex-1 flex flex-col min-w-0 lg:transition-all lg:duration-300`}>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 md:p-12 bg-gray-50 mobile-padding">
@@ -290,6 +464,7 @@ export default function App() {
                 jobDescription={jobDescription}
                 setJobDescription={setJobDescription}
                 setChatHistory={setChatHistory}
+                incrementApiHits={incrementApiHits}
               />
             )}
             {activeTab === 'generate' && (
@@ -299,6 +474,7 @@ export default function App() {
                 optimizationResults={optimizationResults}
                 setOptimizationResults={setOptimizationResults}
                 setChatHistory={setChatHistory}
+                incrementApiHits={incrementApiHits}
               />
             )}
           </div>
@@ -308,11 +484,35 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
           initialUserName={userName}
           initialResumeFolder={resumeFolder}
-          onSave={({ userName, resumeFolder }) => {
+          initialApiHitLimit={apiHitLimit}
+          initialApiHitsUsed={apiHitsUsed}
+          initialApiResetTime={apiResetTime}
+          initialApiResetFrequency={apiResetFrequency}
+          onSave={({ userName, resumeFolder, apiHitLimit, apiHitsUsed, apiResetTime, apiResetFrequency }) => {
             setUserName(userName);
             setResumeFolder(resumeFolder);
+            setApiHitLimit(apiHitLimit);
+            setApiHitsUsed(apiHitsUsed);
+            setApiResetTime(apiResetTime);
+            setApiResetFrequency(apiResetFrequency);
+            // Save settings immediately to localStorage
             localStorage.setItem('userName', userName);
             localStorage.setItem('resumeFolder', resumeFolder);
+            localStorage.setItem('apiHitLimit', apiHitLimit.toString());
+            localStorage.setItem('apiHitsUsed', apiHitsUsed.toString());
+            localStorage.setItem('apiResetTime', apiResetTime);
+            localStorage.setItem('apiResetFrequency', apiResetFrequency);
+            // Also save to a dedicated settings object
+            const settings = {
+              userName,
+              resumeFolder,
+              apiHitLimit,
+              apiHitsUsed,
+              apiResetTime,
+              apiResetFrequency,
+              lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem('resuPromptSettings', JSON.stringify(settings));
           }}
         />
         <GeminiChatHistory

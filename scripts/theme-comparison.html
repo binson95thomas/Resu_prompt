@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResuPrompt - Theme Comparison</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Ocean Blue Theme
+                        ocean: {
+                            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+                            400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+                            800: '#1e40af', 900: '#1e3a8a',
+                        },
+                        // Purple Theme
+                        purple: {
+                            50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe',
+                            400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7c3aed',
+                            800: '#6b21a8', 900: '#581c87',
+                        },
+                        // Sunset Theme
+                        sunset: {
+                            50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 300: '#fdba74',
+                            400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c',
+                            800: '#9a3412', 900: '#7c2d12',
+                        },
+                        // Forest Theme
+                        forest: {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d',
+                        },
+                        // Midnight Theme
+                        midnight: {
+                            50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
+                            400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
+                            800: '#1e293b', 900: '#0f172a',
+                        },
+                        // Rose Theme
+                        rose: {
+                            50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 300: '#fda4af',
+                            400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c',
+                            800: '#9f1239', 900: '#881337',
+                        },
+                        // Amber Theme
+                        amber: {
+                            50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d',
+                            400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309',
+                            800: '#92400e', 900: '#78350f',
+                        },
+                        // Sky Blue Theme
+                        sky: {
+                            50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+                            400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1',
+                            800: '#075985', 900: '#0c4a6e',
+                        },
+                        // Lime Theme
+                        lime: {
+                            50: '#f7fee7', 100: '#ecfccb', 200: '#d9f99d', 300: '#bef264',
+                            400: '#a3e635', 500: '#84cc16', 600: '#65a30d', 700: '#4d7c0f',
+                            800: '#3f6212', 900: '#365314',
+                        },
+                        // Violet Theme
+                        violet: {
+                            50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe',
+                            400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7c3aed',
+                            800: '#6b21a8', 900: '#581c87',
+                        },
+                        // Emerald Theme
+                        emerald: {
+                            50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7',
+                            400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857',
+                            800: '#065f46', 900: '#064e3b',
+                        },
+                        // Indigo Theme
+                        indigo: {
+                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                            400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                            800: '#3730a3', 900: '#312e81',
+                        },
+                        // Red Theme
+                        red: {
+                            50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 300: '#fca5a5',
+                            400: '#f87171', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c',
+                            800: '#991b1b', 900: '#7f1d1d',
+                        },
+                        // Stone Theme
+                        stone: {
+                            50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1',
+                            400: '#a8a29e', 500: '#78716c', 600: '#57534e', 700: '#44403c',
+                            800: '#292524', 900: '#1c1917',
+                        },
+                        // Fuchsia Theme
+                        fuchsia: {
+                            50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc',
+                            400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf',
+                            800: '#86198f', 900: '#701a75',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .theme-card {
+            transition: all 0.3s ease;
+        }
+        .theme-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+        }
+        .color-swatch {
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2 text-center">ResuPrompt Theme Comparison</h1>
+        <p class="text-gray-600 text-center mb-8">Compare different color themes for your application</p>
+        
+        <!-- Theme Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+            
+            <!-- Current Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Current Theme</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-emerald-50 via-blue-50 to-yellow-50 border border-emerald-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-emerald-100 to-teal-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-emerald-500"></div>
+                            <div class="color-swatch bg-teal-600"></div>
+                            <div class="color-swatch bg-blue-500"></div>
+                            <div class="color-swatch bg-indigo-600"></div>
+                            <div class="color-swatch bg-yellow-400"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Emerald/Teal</p>
+                        <p><strong>Secondary:</strong> Blue/Indigo</p>
+                        <p><strong>Accent:</strong> Yellow/Orange</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ocean Blue Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Ocean Blue</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-ocean-50 via-cyan-50 to-teal-50 border border-ocean-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-ocean-500 to-cyan-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-ocean-100 to-cyan-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-teal-100 to-cyan-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-ocean-500"></div>
+                            <div class="color-swatch bg-cyan-500"></div>
+                            <div class="color-swatch bg-teal-500"></div>
+                            <div class="color-swatch bg-ocean-600"></div>
+                            <div class="color-swatch bg-cyan-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Ocean Blue (#3b82f6)</p>
+                        <p><strong>Secondary:</strong> Cyan (#06b6d4)</p>
+                        <p><strong>Accent:</strong> Teal (#14b8a6)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purple Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Purple Dream</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-pink-100 to-purple-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-purple-500"></div>
+                            <div class="color-swatch bg-indigo-500"></div>
+                            <div class="color-swatch bg-pink-500"></div>
+                            <div class="color-swatch bg-purple-600"></div>
+                            <div class="color-swatch bg-indigo-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Purple (#a855f7)</p>
+                        <p><strong>Secondary:</strong> Indigo (#6366f1)</p>
+                        <p><strong>Accent:</strong> Pink (#ec4899)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sunset Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Sunset Glow</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 border border-orange-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-orange-100 to-red-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-orange-500"></div>
+                            <div class="color-swatch bg-red-500"></div>
+                            <div class="color-swatch bg-yellow-500"></div>
+                            <div class="color-swatch bg-orange-600"></div>
+                            <div class="color-swatch bg-red-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Orange (#f97316)</p>
+                        <p><strong>Secondary:</strong> Red (#ef4444)</p>
+                        <p><strong>Accent:</strong> Yellow (#eab308)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forest Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Forest Green</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border border-green-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-teal-100 to-green-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-green-500"></div>
+                            <div class="color-swatch bg-emerald-500"></div>
+                            <div class="color-swatch bg-teal-500"></div>
+                            <div class="color-swatch bg-green-600"></div>
+                            <div class="color-swatch bg-emerald-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Green (#22c55e)</p>
+                        <p><strong>Secondary:</strong> Emerald (#10b981)</p>
+                        <p><strong>Accent:</strong> Teal (#14b8a6)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Midnight Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Midnight Dark</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 border border-slate-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-slate-600 to-gray-700 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-slate-100 to-gray-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-zinc-100 to-slate-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-slate-600"></div>
+                            <div class="color-swatch bg-gray-600"></div>
+                            <div class="color-swatch bg-zinc-600"></div>
+                            <div class="color-swatch bg-slate-700"></div>
+                            <div class="color-swatch bg-gray-700"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Slate (#475569)</p>
+                        <p><strong>Secondary:</strong> Gray (#6b7280)</p>
+                        <p><strong>Accent:</strong> Zinc (#71717a)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rose Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Rose Garden</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 border border-rose-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-rose-100 to-pink-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-fuchsia-100 to-rose-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-rose-500"></div>
+                            <div class="color-swatch bg-pink-500"></div>
+                            <div class="color-swatch bg-fuchsia-500"></div>
+                            <div class="color-swatch bg-rose-600"></div>
+                            <div class="color-swatch bg-pink-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Rose (#f43f5e)</p>
+                        <p><strong>Secondary:</strong> Pink (#ec4899)</p>
+                        <p><strong>Accent:</strong> Fuchsia (#d946ef)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amber Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Golden Amber</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border border-amber-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-amber-100 to-yellow-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-orange-100 to-amber-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-amber-500"></div>
+                            <div class="color-swatch bg-yellow-500"></div>
+                            <div class="color-swatch bg-orange-500"></div>
+                            <div class="color-swatch bg-amber-600"></div>
+                            <div class="color-swatch bg-yellow-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Amber (#f59e0b)</p>
+                        <p><strong>Secondary:</strong> Yellow (#eab308)</p>
+                        <p><strong>Accent:</strong> Orange (#f97316)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sky Blue Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Sky Blue</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 border border-sky-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-sky-500 to-blue-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-sky-100 to-blue-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-cyan-100 to-sky-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-sky-500"></div>
+                            <div class="color-swatch bg-blue-500"></div>
+                            <div class="color-swatch bg-cyan-500"></div>
+                            <div class="color-swatch bg-sky-600"></div>
+                            <div class="color-swatch bg-blue-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Sky Blue (#0ea5e9)</p>
+                        <p><strong>Secondary:</strong> Blue (#3b82f6)</p>
+                        <p><strong>Accent:</strong> Cyan (#06b6d4)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lime Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Lime Fresh</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-lime-50 via-green-50 to-emerald-50 border border-lime-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-lime-500 to-green-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-lime-100 to-green-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-emerald-100 to-lime-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-lime-500"></div>
+                            <div class="color-swatch bg-green-500"></div>
+                            <div class="color-swatch bg-emerald-500"></div>
+                            <div class="color-swatch bg-lime-600"></div>
+                            <div class="color-swatch bg-green-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Lime (#84cc16)</p>
+                        <p><strong>Secondary:</strong> Green (#22c55e)</p>
+                        <p><strong>Accent:</strong> Emerald (#10b981)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Violet Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Violet Magic</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 border border-violet-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-violet-100 to-purple-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-fuchsia-100 to-violet-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-violet-500"></div>
+                            <div class="color-swatch bg-purple-500"></div>
+                            <div class="color-swatch bg-fuchsia-500"></div>
+                            <div class="color-swatch bg-violet-600"></div>
+                            <div class="color-swatch bg-purple-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Violet (#a855f7)</p>
+                        <p><strong>Secondary:</strong> Purple (#a855f7)</p>
+                        <p><strong>Accent:</strong> Fuchsia (#d946ef)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emerald Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Emerald Elegance</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-emerald-100 to-teal-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-cyan-100 to-emerald-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-emerald-500"></div>
+                            <div class="color-swatch bg-teal-500"></div>
+                            <div class="color-swatch bg-cyan-500"></div>
+                            <div class="color-swatch bg-emerald-600"></div>
+                            <div class="color-swatch bg-teal-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Emerald (#10b981)</p>
+                        <p><strong>Secondary:</strong> Teal (#14b8a6)</p>
+                        <p><strong>Accent:</strong> Cyan (#06b6d4)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indigo Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Indigo Deep</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 border border-indigo-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-indigo-100 to-blue-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-indigo-500"></div>
+                            <div class="color-swatch bg-blue-500"></div>
+                            <div class="color-swatch bg-purple-500"></div>
+                            <div class="color-swatch bg-indigo-600"></div>
+                            <div class="color-swatch bg-blue-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Indigo (#6366f1)</p>
+                        <p><strong>Secondary:</strong> Blue (#3b82f6)</p>
+                        <p><strong>Accent:</strong> Purple (#a855f7)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Red Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Red Energy</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 border border-red-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-red-500 to-rose-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-red-100 to-rose-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-pink-100 to-red-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-red-500"></div>
+                            <div class="color-swatch bg-rose-500"></div>
+                            <div class="color-swatch bg-pink-500"></div>
+                            <div class="color-swatch bg-red-600"></div>
+                            <div class="color-swatch bg-rose-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Red (#ef4444)</p>
+                        <p><strong>Secondary:</strong> Rose (#f43f5e)</p>
+                        <p><strong>Accent:</strong> Pink (#ec4899)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stone Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Stone Neutral</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-stone-50 via-gray-50 to-slate-50 border border-stone-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-stone-500 to-gray-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-stone-100 to-gray-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-slate-100 to-stone-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-stone-500"></div>
+                            <div class="color-swatch bg-gray-500"></div>
+                            <div class="color-swatch bg-slate-500"></div>
+                            <div class="color-swatch bg-stone-600"></div>
+                            <div class="color-swatch bg-gray-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Stone (#78716c)</p>
+                        <p><strong>Secondary:</strong> Gray (#6b7280)</p>
+                        <p><strong>Accent:</strong> Slate (#64748b)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fuchsia Theme -->
+            <div class="theme-card bg-white rounded-2xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Fuchsia Flash</h3>
+                <div class="space-y-4">
+                    <!-- Success Screen Preview -->
+                    <div class="bg-gradient-to-br from-fuchsia-50 via-pink-50 to-purple-50 border border-fuchsia-200 rounded-xl p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-fuchsia-500 to-pink-600 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <span class="font-semibold text-sm">Success!</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="bg-gradient-to-r from-fuchsia-100 to-pink-100 rounded-lg p-2 text-xs">CV File</div>
+                            <div class="bg-gradient-to-r from-purple-100 to-fuchsia-100 rounded-lg p-2 text-xs">JD File</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Palette -->
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">Color Palette</h4>
+                        <div class="color-palette">
+                            <div class="color-swatch bg-fuchsia-500"></div>
+                            <div class="color-swatch bg-pink-500"></div>
+                            <div class="color-swatch bg-purple-500"></div>
+                            <div class="color-swatch bg-fuchsia-600"></div>
+                            <div class="color-swatch bg-pink-600"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Info -->
+                    <div class="text-xs text-gray-600">
+                        <p><strong>Primary:</strong> Fuchsia (#d946ef)</p>
+                        <p><strong>Secondary:</strong> Pink (#ec4899)</p>
+                        <p><strong>Accent:</strong> Purple (#a855f7)</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- How to Add New Themes Section -->
+        <div class="mt-12 bg-white rounded-2xl p-8 shadow-lg">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">How to Add New Themes</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">1. Add Colors to Tailwind Config</h3>
+                    <pre class="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto"><code>// Add to tailwind.config.js
+colors: {
+    yourTheme: {
+        50: '#f0f9ff',   // Lightest
+        100: '#e0f2fe',
+        200: '#bae6fd',
+        300: '#7dd3fc',
+        400: '#38bdf8',
+        500: '#0ea5e9',  // Primary
+        600: '#0284c7',
+        700: '#0369a1',
+        800: '#075985',
+        900: '#0c4a6e',  // Darkest
+    }
+}</code></pre>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">2. Copy Theme Card Template</h3>
+                    <pre class="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto"><code>&lt;div class="theme-card bg-white rounded-2xl p-6 shadow-lg"&gt;
+    &lt;h3 class="text-xl font-bold text-gray-900 mb-4"&gt;Your Theme Name&lt;/h3&gt;
+    &lt;div class="space-y-4"&gt;
+        &lt;!-- Success Screen Preview --&gt;
+        &lt;div class="bg-gradient-to-br from-yourTheme-50 via-secondary-50 to-accent-50 border border-yourTheme-200 rounded-xl p-4"&gt;
+            &lt;!-- Content here --&gt;
+        &lt;/div&gt;
+        &lt;!-- Color Palette --&gt;
+        &lt;!-- Theme Info --&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 class="font-semibold text-blue-900 mb-2">💡 Tips for Creating Themes:</h4>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• Use 3-5 colors that work well together</li>
+                    <li>• Include a primary, secondary, and accent color</li>
+                    <li>• Ensure good contrast for accessibility</li>
+                    <li>• Test with both light and dark text</li>
+                    <li>• Consider the professional context of resume optimization</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Theme Selection Guide -->
+        <div class="mt-8 bg-white rounded-2xl p-8 shadow-lg">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Theme Selection Guide</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">Professional</h4>
+                    <p class="text-sm text-gray-600">Ocean Blue, Midnight Dark, Current Theme</p>
+                    <p class="text-xs text-gray-500 mt-2">Best for corporate environments</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">Creative</h4>
+                    <p class="text-sm text-gray-600">Purple Dream, Rose Garden, Sunset Glow</p>
+                    <p class="text-xs text-gray-500 mt-2">Great for design/creative roles</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">Tech/Modern</h4>
+                    <p class="text-sm text-gray-600">Ocean Blue, Midnight Dark, Forest Green</p>
+                    <p class="text-xs text-gray-500 mt-2">Perfect for tech companies</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">Warm/Friendly</h4>
+                    <p class="text-sm text-gray-600">Golden Amber, Sunset Glow, Forest Green</p>
+                    <p class="text-xs text-gray-500 mt-2">Good for customer-facing roles</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">Bold/Confident</h4>
+                    <p class="text-sm text-gray-600">Rose Garden, Purple Dream, Sunset Glow</p>
+                    <p class="text-xs text-gray-500 mt-2">For leadership positions</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">Minimalist</h4>
+                    <p class="text-sm text-gray-600">Midnight Dark, Current Theme, Ocean Blue</p>
+                    <p class="text-xs text-gray-500 mt-2">Clean and simple approach</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

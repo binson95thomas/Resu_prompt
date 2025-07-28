@@ -5,6 +5,10 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import fs from 'fs-extra'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
 
 // Import routes
 import optimizeRoutes from './routes/optimize.js'
@@ -68,6 +72,76 @@ app.get('/api/health', (req, res) => {
   })
 })
 
+// Open file endpoint
+app.post('/api/open-file', async (req, res) => {
+  try {
+    const { filePath } = req.body
+    
+    if (!filePath) {
+      return res.status(400).json({ error: 'File path is required' })
+    }
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+    
+    // Open file based on platform
+    const platform = process.platform
+    let command
+    
+    if (platform === 'win32') {
+      command = `start "" "${filePath}"`
+    } else if (platform === 'darwin') {
+      command = `open "${filePath}"`
+    } else {
+      command = `xdg-open "${filePath}"`
+    }
+    
+    await execAsync(command)
+    res.json({ success: true, message: 'File opened successfully' })
+    
+  } catch (error) {
+    console.error('Error opening file:', error)
+    res.status(500).json({ error: 'Failed to open file', message: error.message })
+  }
+})
+
+// Open folder endpoint
+app.post('/api/open-folder', async (req, res) => {
+  try {
+    const { folderPath } = req.body
+    
+    if (!folderPath) {
+      return res.status(400).json({ error: 'Folder path is required' })
+    }
+    
+    // Check if folder exists
+    if (!fs.existsSync(folderPath)) {
+      return res.status(404).json({ error: 'Folder not found' })
+    }
+    
+    // Open folder based on platform
+    const platform = process.platform
+    let command
+    
+    if (platform === 'win32') {
+      command = `explorer "${folderPath}"`
+    } else if (platform === 'darwin') {
+      command = `open "${folderPath}"`
+    } else {
+      command = `xdg-open "${folderPath}"`
+    }
+    
+    await execAsync(command)
+    res.json({ success: true, message: 'Folder opened successfully' })
+    
+  } catch (error) {
+    console.error('Error opening folder:', error)
+    res.status(500).json({ error: 'Failed to open folder', message: error.message })
+  }
+})
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Error:', error)
@@ -94,10 +168,12 @@ app.use('*', (req, res) => {
 })
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`🌐 Network accessible on: http://0.0.0.0:${PORT}`)
   console.log(`📁 Upload directory: ${path.join(__dirname, '../uploads')}`)
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`)
+  console.log(`🔗 Network health check: http://[YOUR_IP]:${PORT}/api/health`)
 })
 
 export { upload } 

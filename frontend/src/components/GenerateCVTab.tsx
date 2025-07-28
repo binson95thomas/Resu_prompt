@@ -3,30 +3,73 @@ import { Download, FileText, XCircle, CheckCircle, Copy, Clipboard } from 'lucid
 import toast from 'react-hot-toast'
 import Tabs from './Tabs';
 import ManualOptimizationModal from './ManualOptimizationModal';
-// Simple diff viewer function
-const createDiffView = (original: string, suggested: string) => {
-  const words1 = original.split(/\s+/);
-  const words2 = suggested.split(/\s+/);
-  const result: JSX.Element[] = [];
+// Simplified diff algorithm to prevent freezing
+const createEnhancedDiffView = (original: string, suggested: string) => {
+  // Simple word-by-word comparison
+  const originalWords = original.split(/\s+/)
+  const suggestedWords = suggested.split(/\s+/)
   
-  let i = 0, j = 0;
-  while (i < words1.length || j < words2.length) {
-    if (i < words1.length && j < words2.length && words1[i] === words2[j]) {
-      result.push(<span key={`same-${i}`} className="text-gray-700">{words1[i]} </span>);
-      i++; j++;
-    } else if (j < words2.length) {
-      result.push(<span key={`add-${j}`} className="bg-green-100 text-green-800 px-1 rounded">{words2[j]} </span>);
-      j++;
-    } else if (i < words1.length) {
-      result.push(<span key={`del-${i}`} className="bg-red-100 text-red-800 px-1 rounded line-through">{words1[i]} </span>);
-      i++;
+  const result: { text: string; type: 'unchanged' | 'added' | 'removed' }[] = []
+  
+  let i = 0, j = 0
+  
+  while (i < originalWords.length || j < suggestedWords.length) {
+    if (i < originalWords.length && j < suggestedWords.length && originalWords[i] === suggestedWords[j]) {
+      // Same word - unchanged
+      result.push({ text: originalWords[i] + ' ', type: 'unchanged' })
+      i++
+      j++
+    } else if (j < suggestedWords.length) {
+      // Word added in suggested
+      result.push({ text: suggestedWords[j] + ' ', type: 'added' })
+      j++
+    } else if (i < originalWords.length) {
+      // Word removed from original
+      result.push({ text: originalWords[i] + ' ', type: 'removed' })
+      i++
     } else {
-      break;
+      break
     }
   }
   
-  return <div className="text-sm">{result}</div>;
-};
+  return result
+}
+
+// Create a diff view that shows the suggested text with inline changes
+const createInlineDiffView = (original: string, suggested: string) => {
+  const diffResult = createEnhancedDiffView(original, suggested)
+  const result: JSX.Element[] = []
+  
+  diffResult.forEach((item, index) => {
+    if (item.type === 'unchanged') {
+      result.push(<span key={`same-${index}`} className="text-gray-700">{item.text}</span>)
+    } else if (item.type === 'added') {
+      result.push(<span key={`add-${index}`} className="bg-green-100 text-green-800 px-1 rounded font-medium">{item.text}</span>)
+    } else if (item.type === 'removed') {
+      result.push(<span key={`del-${index}`} className="bg-red-100 text-red-800 px-1 rounded line-through">{item.text}</span>)
+    }
+  })
+  
+  return <div className="text-sm leading-relaxed">{result}</div>
+}
+
+// Simple diff viewer function
+const createDiffView = (original: string, suggested: string) => {
+  const diffResult = createEnhancedDiffView(original, suggested)
+  const result: JSX.Element[] = []
+  
+  diffResult.forEach((item, index) => {
+    if (item.type === 'unchanged') {
+      result.push(<span key={`same-${index}`} className="text-gray-700">{item.text}</span>)
+    } else if (item.type === 'added') {
+      result.push(<span key={`add-${index}`} className="bg-green-100 text-green-800 px-1 rounded font-medium">{item.text}</span>)
+    } else if (item.type === 'removed') {
+      result.push(<span key={`del-${index}`} className="bg-red-100 text-red-800 px-1 rounded line-through">{item.text}</span>)
+    }
+  })
+  
+  return <div className="text-sm leading-relaxed">{result}</div>
+}
 
 // Enhanced diff viewer for bullets/lines
 const createBulletDiffView = (original: string, suggested: string) => {
@@ -62,6 +105,7 @@ interface GenerateCVTabProps {
   optimizationResults: any
   setOptimizationResults: (results: any) => void
   setChatHistory: (fn: (prev: any[]) => any[]) => void
+  incrementApiHits: () => void
 }
 
 interface SuggestedEdit {
@@ -198,7 +242,8 @@ export default function GenerateCVTab({
   jobDescription, 
   optimizationResults, 
   setOptimizationResults,
-  setChatHistory
+  setChatHistory,
+  incrementApiHits
 }: GenerateCVTabProps) {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -285,8 +330,8 @@ export default function GenerateCVTab({
       // Handle the response structure - check if it has an 'optimization' key
       const optimizationData = data.optimization || data
       
-      // Extract model information from the response
-      const modelUsed = optimizationData.model || optimizationData.modelUsed || 'Gemini 2.0 Flash'
+      // Hardcode model for automatic optimization
+      const modelUsed = 'Gemini 1.5 Flash'
       
       // Add model information to optimization results
       const optimizationDataWithModel = {
@@ -317,8 +362,9 @@ export default function GenerateCVTab({
         }
       ])
       
-        setIsOptimizing(false)
-        toast.success('CV optimization completed!')
+      incrementApiHits(); // Increment API hits on successful call
+      setIsOptimizing(false)
+      toast.success('CV optimization completed!')
     } catch (error: any) {
       console.error('Optimization failed:', error)
       setError(error.message || 'Optimization failed. Please try again.')
@@ -412,7 +458,7 @@ export default function GenerateCVTab({
       
       const parsedResponse = JSON.parse(cleanedResponse)
       
-      // Extract model information from the response
+      // Extract model information from the response for manual optimization
       const modelUsed = parsedResponse.model || parsedResponse.modelUsed || 'Unknown Model'
       
       // Add model information to optimization results
@@ -424,20 +470,20 @@ export default function GenerateCVTab({
       setOptimizationResults(optimizationDataWithModel)
       setSuggestedEdits(parsedResponse.suggestedEdits || [])
       
+      // Store the prompt before clearing it
+      const promptToUse = lastCopiedPrompt || `Manual optimization using ${modelUsed} - Prompt copied from shared template`
+      
       // Add to chat history with model information from response
       setChatHistory(prev => [
         ...prev,
         {
-          question: lastCopiedPrompt || `Manual optimization using ${modelUsed} - Prompt copied from shared template`,
+          question: promptToUse,
           answer: JSON.stringify(parsedResponse, null, 2),
           timestamp: new Date().toISOString(),
           model: modelUsed,
           promptSource: parsedResponse.promptSource || 'manual'
         }
       ])
-      
-      // Clear the stored prompt after using it
-      setLastCopiedPrompt('')
       
       setShowManualOptimization(false) // Close the manual optimization frame
       setManualResponse('') // Clear the response textarea
@@ -472,6 +518,7 @@ export default function GenerateCVTab({
       const data = await response.json()
       setOptimizationResults(data.suggestions || data)
       setSuggestedEdits((data.suggestions || data).suggestedEdits || [])
+      incrementApiHits(); // Increment API hits for recalculate
       if ((data.suggestions || data).predictedMatchScoreIfKeywordsAdded) {
         toast.success(`Predicted match score if keywords added: ${(data.suggestions || data).predictedMatchScoreIfKeywordsAdded}%`)
       }
@@ -650,8 +697,8 @@ export default function GenerateCVTab({
                         </div>
                       </div>
                       
-                      <div className="flex items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
-                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-4">
+                      <div className="flex items-center p-4 bg-gradient-to-r from-ocean-50 to-cyan-50 rounded-lg border border-ocean-100">
+                                                  <div className="w-10 h-10 bg-ocean-500 rounded-lg flex items-center justify-center mr-4">
                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -730,132 +777,246 @@ export default function GenerateCVTab({
                 </div>
               )}
 
-              {/* Summary, Keywords, and Raw Response - Side by Side */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Enhanced Summary, Keywords, and Raw Response - Side by Side */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Summary Section */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                      Summary
-                    </h3>
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-4">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Summary</h3>
+                      <p className="text-sm text-gray-600">Key insights and recommendations</p>
+                    </div>
                   </div>
                   <div className="text-gray-700 leading-relaxed text-sm">
                     {optimizationResults.overallRecommendations ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {Array.isArray(optimizationResults.overallRecommendations) ? 
                           optimizationResults.overallRecommendations.map((rec: string, i: number) => (
-                            <div key={i} className="p-2 bg-blue-50 rounded border-l-4 border-blue-400">
-                              {rec}
+                            <div key={i} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                              <div className="flex items-start">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                <span className="text-blue-800">{rec}</span>
+                              </div>
                             </div>
                           )) :
-                          <div className="p-2 bg-blue-50 rounded border-l-4 border-blue-400">
-                            {optimizationResults.overallRecommendations}
+                          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                            <div className="flex items-start">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                              <span className="text-blue-800">{optimizationResults.overallRecommendations}</span>
+                            </div>
                           </div>
                         }
                       </div>
                     ) : optimizationResults.improvements ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {Array.isArray(optimizationResults.improvements) ? 
                           optimizationResults.improvements.map((imp: string, i: number) => (
-                            <div key={i} className="p-2 bg-green-50 rounded border-l-4 border-green-400">
-                              {imp}
+                            <div key={i} className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                              <div className="flex items-start">
+                                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                                <span className="text-green-800">{imp}</span>
+                              </div>
                             </div>
                           )) :
-                          <div className="p-2 bg-green-50 rounded border-l-4 border-green-400">
-                            {optimizationResults.improvements}
+                          <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                            <div className="flex items-start">
+                              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                              <span className="text-green-800">{optimizationResults.improvements}</span>
+                            </div>
                           </div>
                         }
                       </div>
                     ) : (
-                      <p className="text-gray-500 italic">No summary available.</p>
+                      <div className="text-center py-6">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-500 text-sm">No summary available</p>
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Keywords Section */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                      Keywords
-                    </h3>
-                    <span className="text-sm text-gray-500">
-                      {Array.isArray(optimizationResults.keywords) ? optimizationResults.keywords.length : 0} found
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mr-4">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">Keywords</h3>
+                        <p className="text-sm text-gray-600">Important terms from the job description</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                      {Array.isArray(optimizationResults.keywords) ? optimizationResults.keywords.length : 0}
                     </span>
                   </div>
                   {Array.isArray(optimizationResults.keywords) && optimizationResults.keywords.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {optimizationResults.keywords.map((kw: string, i: number) => (
-                        <span key={i} className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                        <span key={i} className="px-3 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 rounded-lg text-sm font-medium border border-green-200 hover:from-green-200 hover:to-emerald-200 transition-all duration-200">
                           {kw}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 italic text-sm">No keywords found.</p>
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-sm">No keywords found</p>
+                    </div>
                   )}
-              </div>
+                </div>
 
                 {/* Raw Response Section */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <button
-                    className="w-full text-left flex items-center justify-between font-semibold text-gray-900 hover:text-blue-700 transition-colors"
-                    onClick={() => setShowRawResponse(!showRawResponse)}
-                  >
-                    <span className="flex items-center">
-                      <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
-                      Raw Response
-                    </span>
-                    <span className="text-xs text-gray-500">{showRawResponse ? '▲' : '▼'}</span>
-                  </button>
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mr-4">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">Raw Response</h3>
+                        <p className="text-sm text-gray-600">Complete AI response data</p>
+                      </div>
+                    </div>
+                    <button
+                      className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full hover:bg-purple-200 transition-colors"
+                      onClick={() => setShowRawResponse(!showRawResponse)}
+                    >
+                      {showRawResponse ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                   {showRawResponse && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto max-h-48 font-mono">
-                        {JSON.stringify(optimizationResults, null, 2)}
-                      </pre>
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-lg border border-gray-200">
+                        <pre className="text-xs overflow-x-auto max-h-64 font-mono text-gray-700 leading-relaxed">
+                          {JSON.stringify(optimizationResults, null, 2)}
+                        </pre>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Suggestions Section - Full Width */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
-                    Suggestions
-                  </h3>
-                  <span className="text-sm text-gray-500">
-                    {Array.isArray(optimizationResults.suggestedEdits) ? optimizationResults.suggestedEdits.length : 0} suggestions
-                  </span>
+              {/* Enhanced Suggestions Section */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">AI Suggestions</h3>
+                      <p className="text-sm text-gray-600">Improve your CV with these targeted recommendations</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                      {Array.isArray(optimizationResults.suggestedEdits) ? optimizationResults.suggestedEdits.length : 0} suggestions
+                    </span>
+                  </div>
                 </div>
+                
                 {Array.isArray(optimizationResults.suggestedEdits) && optimizationResults.suggestedEdits.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {optimizationResults.suggestedEdits.map((s: any, i: number) => (
-                      <div key={i} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                      <div key={i} className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200">
                         <button
-                          className="w-full text-left flex justify-between items-center font-medium text-gray-900 hover:text-blue-700 transition-colors"
+                          className="w-full text-left"
                           onClick={() => toggleSuggestion(i)}
                         >
-                          <span className="truncate">{s.improvedBullet || s.suggested}</span>
-                          <span className="ml-2 text-xs text-gray-500 flex-shrink-0">
-                            {expandedSuggestions.has(i) ? '▲' : '▼'}
-                          </span>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">{i + 1}</span>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-left">
+                                  {s.improvedBullet || s.suggested}
+                                </h4>
+                                <p className="text-sm text-gray-500 mt-1">Click to see details</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                                Suggestion
+                              </span>
+                              <svg 
+                                className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSuggestions.has(i) ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
                         </button>
+                        
                         {expandedSuggestions.has(i) && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 space-y-2 text-sm">
-                            <div className="bg-red-50 p-2 rounded">
-                              <span className="font-semibold text-red-800">Original:</span>
-                              <div className="text-red-700 mt-1">{s.originalBullet || s.original}</div>
+                          <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                            {/* Original Text */}
+                            <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-4">
+                              <div className="flex items-center mb-2">
+                                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </div>
+                                <span className="font-semibold text-red-800 text-sm">Original Text</span>
+                              </div>
+                              <div className="text-red-700 text-sm leading-relaxed bg-white p-3 rounded border border-red-100">
+                                {s.originalBullet || s.original}
+                              </div>
                             </div>
-                            <div className="bg-green-50 p-2 rounded">
-                              <span className="font-semibold text-green-800">Improved:</span>
-                              <div className="text-green-700 mt-1">{s.improvedBullet || s.suggested}</div>
+                            
+                            {/* Improved Text */}
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                              <div className="flex items-center mb-2">
+                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                                <span className="font-semibold text-green-800 text-sm">Improved Version</span>
+                              </div>
+                              <div className="text-green-700 text-sm leading-relaxed bg-white p-3 rounded border border-green-100">
+                                {s.improvedBullet || s.suggested}
+                              </div>
                             </div>
-                            <div className="bg-blue-50 p-2 rounded">
-                              <span className="font-semibold text-blue-800">Reason:</span>
-                              <div className="text-blue-700 mt-1">{s.reason}</div>
+                            
+                            {/* Reason */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                              <div className="flex items-center mb-2">
+                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </div>
+                                <span className="font-semibold text-blue-800 text-sm">Why This Change?</span>
+                              </div>
+                              <div className="text-blue-700 text-sm leading-relaxed bg-white p-3 rounded border border-blue-100">
+                                {s.reason}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -863,7 +1024,15 @@ export default function GenerateCVTab({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 italic">No suggestions found.</p>
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Great Job!</h4>
+                    <p className="text-gray-600">Your CV is already well-optimized for this position. No specific suggestions needed.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -926,30 +1095,38 @@ export default function GenerateCVTab({
                         </button>
                       </div>
                     </div>
-                    <div className="text-gray-800">
-                      <p>Original:</p>
-                      {edit.originalBullet ? (
-                        <div className="bg-red-100 text-red-800 rounded line-through px-1 mb-2">
-                          {edit.originalBullet}
+                    <div className="text-gray-800 space-y-3">
+                      <div>
+                        <p className="font-medium text-gray-900 mb-2">Original:</p>
+                        <div className="bg-gray-50 text-gray-700 rounded-lg px-3 py-2 border border-gray-200">
+                          {edit.originalBullet || edit.original}
                         </div>
-                      ) : (
-                        <div className="bg-red-100 text-red-800 rounded line-through px-1 mb-2">
-                          {edit.original}
-                        </div>
-                      )}
-                      <p>Suggested:</p>
-                      {edit.improvedBullet ? (
-                        <div className="bg-green-100 text-green-800 rounded px-1 mb-2">
-                          {edit.improvedBullet}
                       </div>
-                      ) : (
-                        <div className="bg-green-100 text-green-800 rounded px-1 mb-2">
-                          {edit.suggested}
+                      <div>
+                        <p className="font-medium text-gray-900 mb-2">Suggested (with changes highlighted):</p>
+                        <div className="bg-white rounded-lg px-3 py-2 border border-gray-200">
+                          {createInlineDiffView(edit.originalBullet || edit.original || '', edit.improvedBullet || edit.suggested || '')}
                         </div>
-                      )}
-                      <p>Reason:</p>
-                      <div className="bg-yellow-100 text-yellow-800 rounded px-1 mb-2">
-                        {edit.reason}
+                        <div className="mt-2 flex items-center space-x-4 text-xs">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-100 border border-green-300 rounded mr-2"></div>
+                            <span className="text-green-700">Added</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-red-100 border border-red-300 rounded mr-2 line-through"></div>
+                            <span className="text-red-700">Removed</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded mr-2"></div>
+                            <span className="text-gray-700">Unchanged</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 mb-2">Reason:</p>
+                        <div className="bg-yellow-50 text-yellow-800 rounded-lg px-3 py-2 border border-yellow-200">
+                          {edit.reason}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -981,69 +1158,235 @@ export default function GenerateCVTab({
                 </div>
           )}
           {successFolderPath && (
-            <div className="bg-green-50 border border-green-300 text-green-900 rounded p-3 mb-4">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-3 space-y-2 lg:space-y-0">
-                <span className="font-semibold">✅ CV and JD Generated Successfully!</span>
-                <button
-                  className="px-3 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 text-sm w-full lg:w-auto"
-                  onClick={() => {
-                    const folderPath = successFolderPath.split('|')[1].split('\\').slice(0, -1).join('\\') || successFolderPath.split('|')[1].split('/').slice(0, -1).join('/');
-                    navigator.clipboard.writeText(folderPath);
-                    toast.success('Folder path copied!');
-                  }}
-                  title="Copy folder path"
-                >
-                  📁 Copy Folder Path
-                </button>
-              </div>
-              <div className="text-sm space-y-3">
-                {/* CV File */}
-                <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-2 space-y-2 lg:space-y-0">
-                    <div className="font-medium text-blue-800">📄 CV File:</div>
-                    <button
-                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 text-xs w-full lg:w-auto"
-                      onClick={() => {
-                        const cvPath = successFolderPath.split('|')[1];
-                        navigator.clipboard.writeText(cvPath);
-                        toast.success('CV path copied!');
-                      }}
-                    >
-                      📋 Copy Path
-                    </button>
-                  </div>
-                  <div className="mb-1">
-                    <span className="font-medium">File:</span> 
-                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border break-all">{successFolderPath.split('|')[0]}</span>
+            <div className="bg-gradient-to-br from-ocean-50 via-cyan-50 to-teal-50 border border-ocean-200 rounded-2xl p-6 mb-6 shadow-lg backdrop-blur-sm">
+              {/* Success Header */}
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-ocean-500 to-cyan-600 rounded-full flex items-center justify-center shadow-lg">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
                   <div>
-                    <span className="font-medium">Path:</span> 
-                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border text-xs break-all">{successFolderPath.split('|')[1] || successFolderPath}</span>
+                    <h3 className="text-xl font-bold text-gray-900">Files Generated Successfully!</h3>
+                    <p className="text-sm text-gray-600">Your optimized CV and job description are ready</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    className="px-4 py-3 bg-gradient-to-r from-ocean-100 to-cyan-100 text-ocean-800 rounded-xl hover:from-ocean-200 hover:to-cyan-200 text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                    onClick={() => {
+                      const folderPath = successFolderPath.split('|')[1].split('\\').slice(0, -1).join('\\') || successFolderPath.split('|')[1].split('/').slice(0, -1).join('/');
+                      // Try to open folder using backend API
+                      fetch('/api/open-folder', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ folderPath: folderPath })
+                      })
+                      .then(response => {
+                        if (response.ok) {
+                          toast.success('Opening folder...');
+                        } else {
+                          throw new Error('Failed to open folder');
+                        }
+                      })
+                      .catch(error => {
+                        // Fallback: copy path and show instructions
+                        navigator.clipboard.writeText(folderPath);
+                        toast.success('Folder path copied! Paste in File Explorer to open the folder.');
+                      });
+                    }}
+                    title="Open folder"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                      <span>Open Folder</span>
+                    </div>
+                  </button>
+                  <button
+                    className="px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 rounded-xl hover:from-gray-200 hover:to-gray-300 text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                    onClick={() => {
+                      const folderPath = successFolderPath.split('|')[1].split('\\').slice(0, -1).join('\\') || successFolderPath.split('|')[1].split('/').slice(0, -1).join('/');
+                      navigator.clipboard.writeText(folderPath);
+                      toast.success('Folder path copied!');
+                    }}
+                    title="Copy folder path"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span>Copy Path</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Files Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* CV File Card */}
+                <div className="bg-gradient-to-br from-ocean-50 to-cyan-50 border border-ocean-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-ocean-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-md">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">CV File</h4>
+                        <p className="text-xs text-gray-600">Optimized resume</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        className="px-3 py-2 bg-gradient-to-r from-ocean-100 to-cyan-100 text-ocean-800 rounded-lg hover:from-ocean-200 hover:to-cyan-200 text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={() => {
+                          const cvPath = successFolderPath.split('|')[1];
+                          navigator.clipboard.writeText(cvPath);
+                          toast.success('CV path copied!');
+                        }}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span>Copy</span>
+                        </div>
+                      </button>
+                      <button
+                        className="px-3 py-2 bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 rounded-lg hover:from-teal-200 hover:to-cyan-200 text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={() => {
+                          const cvPath = successFolderPath.split('|')[1];
+                          // Try to open file using backend API
+                          fetch('/api/open-file', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ filePath: cvPath })
+                          })
+                          .then(response => {
+                            if (response.ok) {
+                              toast.success('Opening CV file...');
+                            } else {
+                              throw new Error('Failed to open file');
+                            }
+                          })
+                          .catch(error => {
+                            // Fallback: copy path and show instructions
+                            navigator.clipboard.writeText(cvPath);
+                            toast.success('CV path copied! Right-click and "Open file location" to open the file.');
+                          });
+                        }}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          <span>Open</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Filename</span>
+                      <div className="mt-1 font-mono bg-white px-3 py-2 rounded-lg border border-ocean-100 text-sm break-all shadow-sm">
+                        {successFolderPath.split('|')[0]}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Location</span>
+                      <div className="mt-1 font-mono bg-white px-3 py-2 rounded-lg border border-ocean-100 text-xs break-all shadow-sm">
+                        {successFolderPath.split('|')[1] || successFolderPath}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
-                {/* JD File */}
-                <div className="bg-green-50 p-3 rounded border border-green-200">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-2 space-y-2 lg:space-y-0">
-                    <div className="font-medium text-green-800">📋 Job Description:</div>
-                    <button
-                      className="px-2 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 text-xs w-full lg:w-auto"
-                      onClick={() => {
-                        const jdPath = successFolderPath.split('|')[3];
-                        navigator.clipboard.writeText(jdPath);
-                        toast.success('JD path copied!');
-                      }}
-                    >
-                      📋 Copy Path
-                    </button>
+                {/* JD File Card */}
+                <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-md">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Job Description</h4>
+                        <p className="text-xs text-gray-600">Target role details</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        className="px-3 py-2 bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 rounded-lg hover:from-teal-200 hover:to-cyan-200 text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={() => {
+                          const jdPath = successFolderPath.split('|')[3];
+                          navigator.clipboard.writeText(jdPath);
+                          toast.success('JD path copied!');
+                        }}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span>Copy</span>
+                        </div>
+                      </button>
+                      <button
+                        className="px-3 py-2 bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 rounded-lg hover:from-teal-200 hover:to-cyan-200 text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={() => {
+                          const jdPath = successFolderPath.split('|')[3];
+                          // Try to open file using backend API
+                          fetch('/api/open-file', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ filePath: jdPath })
+                          })
+                          .then(response => {
+                            if (response.ok) {
+                              toast.success('Opening JD file...');
+                            } else {
+                              throw new Error('Failed to open file');
+                            }
+                          })
+                          .catch(error => {
+                            // Fallback: copy path and show instructions
+                            navigator.clipboard.writeText(jdPath);
+                            toast.success('JD path copied! Right-click and "Open file location" to open the file.');
+                          });
+                        }}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          <span>Open</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                  <div className="mb-1">
-                    <span className="font-medium">File:</span> 
-                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border break-all">{successFolderPath.split('|')[2]}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Path:</span> 
-                    <span className="ml-2 font-mono bg-white px-2 py-1 rounded border text-xs break-all">{successFolderPath.split('|')[3] || successFolderPath}</span>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Filename</span>
+                      <div className="mt-1 font-mono bg-white px-3 py-2 rounded-lg border border-teal-100 text-sm break-all shadow-sm">
+                        {successFolderPath.split('|')[2]}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Location</span>
+                      <div className="mt-1 font-mono bg-white px-3 py-2 rounded-lg border border-teal-100 text-xs break-all shadow-sm">
+                        {successFolderPath.split('|')[3] || successFolderPath}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

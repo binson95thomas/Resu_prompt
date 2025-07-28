@@ -6,6 +6,7 @@ interface JobDescriptionTabProps {
   jobDescription: string
   setJobDescription: (description: string) => void
   setChatHistory: (fn: (prev: any[]) => any[]) => void
+  incrementApiHits: () => void
 }
 
 function copyToClipboard(text: string) {
@@ -33,7 +34,8 @@ async function hashString(str: string): Promise<string> {
 export default function JobDescriptionTab({ 
   jobDescription, 
   setJobDescription, 
-  setChatHistory 
+  setChatHistory,
+  incrementApiHits
 }: JobDescriptionTabProps) {
   const [analysis, setAnalysis] = useState<any>(() => {
     const saved = localStorage.getItem('jdAnalysis');
@@ -112,14 +114,17 @@ export default function JobDescriptionTab({
       setRawResponse(JSON.stringify(data, null, 2))
       setIsAnalyzing(false)
       setIsCached(false)
-      setChatHistory(prev => [
-        ...prev,
-        {
-          question: jobDescription,
-          answer: JSON.stringify(data, null, 2),
-          timestamp: new Date().toISOString()
-        }
-      ])
+      incrementApiHits(); // Increment API hits on successful call
+              setChatHistory(prev => [
+          ...prev,
+          {
+            question: jobDescription,
+            answer: JSON.stringify(data, null, 2),
+            timestamp: new Date().toISOString(),
+            model: 'Gemini 1.5 Flash',
+            promptSource: 'API'
+          }
+        ])
       // Cache the result
       localStorage.setItem(cacheKey, JSON.stringify(data.analysis));
     } catch (error: any) {

@@ -1,0 +1,48 @@
+Introduction To Role
+
+Are you ready to make a difference in the world of pharmaceuticals? At AstraZeneca, Pharmaceutical Technology and Development (PT&D) is the vital link that transforms groundbreaking science into life-saving medicines. We are committed to delivering 20 new medicines to patients by 2030, and the Associate Principal Data Insight Analyst will be at the forefront of this mission. This role is pivotal in driving data-driven insights and setting a strategic vision for data management within PT&D. You'll be the bridge between science and data, pioneering analytics excellence and fostering innovation.
+
+Accountabilities
+
+As an Associate Principal Data Insight Analyst, you'll be instrumental in shaping the data-driven culture within PT&D. You will be tasked with encouraging analytics utilisation, creating actionable insights for strategic decision-making, and setting standards for analytics solutions. You'll design impactful training programs to build data literacy, implement innovative methodologies for data analysis, and lead the governance of data insights. Additionally, you'll act as a liaison between technical teams and the scientific community, translating complex analytics into actionable projects while building strong collaborator relationships.
+
+Essential Skills/Experience
+
+Experience working in PT&D or directly supporting PT&D (or similar organisation), with a strong working knowledge of relevant processes and data sources
+Demonstrable experience in applying analytics to scientific or business challenges, ideally in drug development.
+Advanced expertise in analytic, data visualisation, and data science techniques, using tools such as Power BI, Spotfire, Python or R.
+Track record of creating and delivering analytics training, promoting standard methodology, and upskilling multi-disciplinary teams.
+Excellent communication and influencing skills, with the ability to lead, inspire, and build collaborative relationships across science, business, and data communities.
+Strong knowledge of data concepts (including data mesh, data governance, data integration, and data engineering).
+Strong analytical and problem-solving abilities with the ability to make data-driven decisions.
+Ability to work in fast-paced, dynamic environment and manage multiple streams of work simultaneously.
+Degree or equivalent experience (Masters or PhD preferred) in scientific or technical subject area.
+Advanced expertise in data visualization and data science techniques.
+Proven leadership, stakeholder management and project delivery skills.
+
+Desirable Skills/Experience
+
+Familiarity with the latest research and thinking and understanding of data analytics affecting the pharmaceutical industry and needs for transformation.
+Ability to work globally including international travel.
+Ability to work in fast-paced, dynamic environment and manage multiple streams of work simultaneously.
+Experience bringing innovation to bear on solving complex and multi-dimensional issues from an operational, technical, financial and human perspective.
+Practical experience applying innovative data acquisition or extraction techniques.
+
+When we put unexpected teams in the same room, we unleash bold thinking with the power to inspire life-changing medicines. In-person working gives us the platform we need to connect, work at pace and challenge perceptions. That's why we work, on average, a minimum of three days per week from the office. But that doesn't mean we're not flexible. We balance the expectation of being in the office while respecting individual flexibility. Join us in our unique and ambitious world.
+
+AstraZeneca offers an inspiring environment where you can make a meaningful impact on people's lives through life-changing medicines. Our commitment to delivering high-quality products spans from research labs to large-scale manufacturing. We are driven by a shared dedication to improving lives globally, supported by cutting-edge science and sustainable practices. Here, you will find opportunities for growth and collaboration in a diverse and inclusive community.
+
+Ready to take the next step? Apply now to join us on this exciting journey!
+
+Date Posted
+
+16-Jul-2025
+
+Closing Date
+
+31-Jul-2025
+
+Our mission is to build an inclusive and equitable environment. We want people to feel they belong at AstraZeneca and Alexion, starting with our recruitment process. We welcome and consider applications from all qualified candidates, regardless of characteristics. We offer reasonable adjustments/accommodations to help all candidates to perform at their best. If you have a need for any adjustments/accommodations, please complete the section in the application form.
+
+---
+Optimization performed using: Gemini 1.5 Flash
