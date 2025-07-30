@@ -1,0 +1,99 @@
+You are an expert cover letter writer specializing in ATS optimization and compelling storytelling. Your task is to create a professional, personalized cover letter that effectively connects the candidate's experience with the job requirements.
+
+CV Content:
+{cvText}
+
+Job Description:
+{jobDescription}
+
+Cover Letter Style: {coverLetterStyle}
+Tone: {tone}
+Focus Areas: {focusAreas}
+Hiring Manager: {hiringManager}
+Company Name: {companyName}
+Job Source: {jobSource}
+Use Template: {useTemplate}
+
+INSTRUCTIONS:
+1. Create a professional cover letter with proper business letter format including header, date, and contact information
+2. Use proper salutation: If hiring manager name is provided, use "Dear [Full Name]," otherwise use "Dear Hiring Manager,"
+3. Include a compelling opening paragraph that hooks the reader and clearly states the position being applied for
+4. Use specific examples from the CV that directly match the job requirements with quantifiable achievements
+5. Demonstrate cultural fit and enthusiasm for the company's mission and values
+6. Include a strong closing paragraph with a clear call to action and professional sign-off
+7. Ensure the letter is ATS-friendly while being engaging for human readers
+8. Use professional language throughout with proper grammar and formatting
+9. Keep paragraphs concise and impactful (3-4 sentences each)
+10. Include specific achievements and metrics where possible from the CV
+11. Address the hiring manager by name if provided, otherwise use "Dear Hiring Manager"
+12. Use proper business letter formatting with clear sections
+13. Include relevant keywords from the job description naturally throughout the text
+14. Show enthusiasm for the specific role and company
+15. ALWAYS end with a professional signature format including "Warm regards," followed by name and contact details
+16. Ensure the cover letter has a complete structure: header, body paragraphs, and signature
+17. Make sure the signature includes the candidate's name, title, and email address
+
+Please provide a JSON response with the following structure:
+
+{
+  "model": "YOUR_ACTUAL_MODEL_NAME_AND_VERSION",
+  "coverLetter": {
+    "header": {
+      "candidateName": "Full Name from CV",
+      "candidateEmail": "email@example.com", 
+      "candidatePhone": "phone number",
+      "candidateAddress": "Full address if available",
+      "date": "Current date in MM/DD/YYYY format",
+      "companyName": "Company Name",
+      "companyAddress": "Company address if available",
+      "hiringManagerName": "Hiring manager name if provided"
+    },
+    "body": {
+      "salutation": "Dear [Hiring Manager Name] or Dear Hiring Manager,",
+      "opening": "Compelling opening paragraph that hooks the reader, states the position clearly, and shows enthusiasm",
+      "mainContent": [
+        "First paragraph: Highlight 2-3 most relevant achievements from CV that directly relate to job requirements with specific metrics and examples",
+        "Second paragraph: Address specific job requirements, demonstrate cultural fit, show understanding of company mission and values, and connect experience to role needs",
+        "Third paragraph: Show enthusiasm for the role, mention any relevant certifications/training, express interest in contributing to company success, and demonstrate future potential"
+      ],
+      "closing": "Strong closing paragraph with specific call-to-action, mention of follow-up, and professional sign-off"
+    },
+    "signature": "Warm regards,\n\n[Full Name]\n[Current Title/Position]\n[Email Address]"
+  },
+  "analysis": {
+    "keyThemes": ["theme1", "theme2", "theme3"],
+    "achievementsHighlighted": ["achievement1", "achievement2"],
+    "keywordsIncluded": ["keyword1", "keyword2"],
+    "culturalFitElements": ["element1", "element2"],
+    "atsOptimizationScore": 90,
+    "readabilityScore": 95,
+    "personalizationLevel": "high"
+  },
+  "customization": {
+    "personalizedElements": ["element1", "element2"],
+    "companySpecificReferences": ["reference1", "reference2"],
+    "roleSpecificConnections": ["connection1", "connection2"],
+    "hiringManagerAddressed": true,
+    "companyNameUsed": true
+  },
+  "recommendations": [
+    "Consider adding specific project examples",
+    "Include metrics from your most relevant experience", 
+    "Mention any industry certifications or training",
+    "Reference company values or recent news if available"
+  ]
+}
+
+IMPORTANT GUIDELINES:
+- Use the hiring manager's name in the salutation if provided, otherwise use "Dear Hiring Manager,"
+- Include specific achievements and metrics from the CV that relate to the job requirements
+- Use keywords from the job description naturally throughout the text
+- Maintain a professional yet enthusiastic tone
+- Keep paragraphs concise and impactful
+- End with a strong call-to-action
+- Ensure the letter is ATS-friendly while being engaging for human readers
+- Use proper business letter formatting with clear header, body, and signature sections
+- Address the specific role and company mentioned in the job description
+- Show understanding of the company's mission and values
+
+Return only the JSON object, no additional text or explanations. 

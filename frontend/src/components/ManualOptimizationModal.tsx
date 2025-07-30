@@ -5,7 +5,7 @@ interface ManualOptimizationModalProps {
   open: boolean;
   onClose: () => void;
   onCopyPrompt: () => void;
-  onPasteResponse: () => void;
+  onPasteResponse: () => Promise<void>;
   manualResponse: string;
   setManualResponse: (response: string) => void;
   copiedPrompt: boolean;
@@ -33,7 +33,7 @@ export default function ManualOptimizationModal({
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 flex items-center">
             <Clipboard className="mr-2" />
-            Manual Optimization
+            Manual Generation
           </h2>
           <button 
             className="text-gray-400 hover:text-gray-700 text-2xl" 
@@ -73,7 +73,7 @@ export default function ManualOptimizationModal({
               className="w-full h-64 p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
-              onClick={onPasteResponse}
+                              onClick={async () => await onPasteResponse()}
               className="w-full btn-secondary mt-2 flex items-center justify-center"
               disabled={!manualResponse.trim()}
             >
@@ -84,9 +84,9 @@ export default function ManualOptimizationModal({
 
           {/* Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-3">Manual Optimization Instructions:</h4>
+            <h4 className="font-medium text-blue-900 mb-3">Manual Generation Instructions:</h4>
             <ol className="text-sm text-blue-800 space-y-2">
-              <li>1. Click "Copy Prompt" to get the complete optimization prompt</li>
+              <li>1. Click "Copy Prompt" to get the complete generation prompt</li>
               <li>2. Paste it into any AI model (ChatGPT, Claude, etc.)</li>
               <li>3. Get the JSON response from the AI (make sure it includes the "model" field)</li>
               <li>4. Paste the response in the text area above</li>

@@ -2,7 +2,7 @@ import express from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs-extra'
-import { generateOptimizedDocx, exportToPDF } from '../services/document.js'
+import { generateOptimizedDocx, exportToPDF, generateCoverLetterDocx } from '../services/document.js'
 
 const router = express.Router()
 
@@ -120,9 +120,10 @@ router.post('/generate-docx', upload.single('cv'), async (req, res) => {
       }).filter(n => n > 0);
       fileSerial = nums.length > 0 ? Math.max(...nums) + 1 : 1;
     }
-    // Get userName from request (default to 'cv')
-    let userName = req.body.userName || 'cv';
-    userName = userName.trim().replace(/\s+/g, '_');
+         // Get userName from request (default to 'cv')
+     let userName = req.body.userName || 'cv';
+     // Ensure userName is file-safe (spaces to underscores)
+     userName = userName.trim().replace(/\s+/g, '_');
     // Build custom filename: <userName>_CV_<fileSerial>.docx
     const downloadName = `${userName}_CV_${fileSerial}.docx`;
     const savePath = path.join(companyFolder, downloadName);
@@ -202,6 +203,118 @@ router.post('/export-pdf', upload.single('cv'), async (req, res) => {
     res.status(500).json({
       error: 'Failed to export PDF',
       message: error.message
+    })
+  }
+})
+
+// Generate cover letter DOCX
+router.post('/generate-cover-letter-docx', upload.single('cv'), async (req, res) => {
+  // Always define resumeFolder at the top
+  const resumeFolder = req.headers['x-resume-folder'] || process.env.RESUME_FOLDER || path.join(process.cwd(), 'resumes');
+  try {
+    const { coverLetter, jobDescription, userName, companyName } = req.body
+    const cvFile = req.file
+
+    if (!cvFile) {
+      return res.status(400).json({
+        error: 'CV file is required'
+      })
+    }
+
+    if (!coverLetter) {
+      return res.status(400).json({
+        error: 'Cover letter data is required'
+      })
+    }
+
+    // Parse the JSON strings from FormData
+    const parsedCoverLetter = JSON.parse(coverLetter)
+    
+    // Generate cover letter DOCX using the document service
+    const coverLetterDocxBuffer = await generateCoverLetterDocx(
+      cvFile.path,
+      parsedCoverLetter,
+      jobDescription
+    )
+
+         // Determine company name for folder - use same logic as CV generation
+     let extractedCompanyName = 'company';
+     // Prefer jobDetails.company if available
+     let jobDetails = {};
+     try {
+       jobDetails = typeof req.body.jobDetails === 'string' ? JSON.parse(req.body.jobDetails) : req.body.jobDetails;
+     } catch {}
+     if (jobDetails && jobDetails.company) {
+       extractedCompanyName = jobDetails.company.trim().replace(/\s+/g, '_');
+     } else if (jobDescription) {
+       // Try to extract from 'Company:'
+       let match = jobDescription.match(/Company:\s*([A-Z][A-Za-z0-9& ]+)/);
+       if (!match) {
+         // Try to extract after 'at'
+         match = jobDescription.match(/at\s+([A-Z][A-Za-z0-9& ]+)/);
+       }
+       if (!match) {
+         // Try to extract first capitalized word/phrase at the top
+         match = jobDescription.match(/^([A-Z][A-Za-z0-9& ]{2,})/m);
+       }
+       if (match && match[1]) {
+         extractedCompanyName = match[1].trim().split(' ')[0].replace(/\s+/g, '_');
+       }
+     }
+    
+    // Find the next serial number for the company folder
+    const existingFolders = fs.existsSync(resumeFolder) ? fs.readdirSync(resumeFolder).filter(f => fs.statSync(path.join(resumeFolder, f)).isDirectory()) : [];
+    let companyFolderName = '';
+    let serial = 1;
+    // Check if a folder for this company already exists
+    for (const folder of existingFolders) {
+      const match = folder.match(/^(\d+)_([\w\s&]+)/);
+      if (match && match[2] && match[2].toLowerCase() === extractedCompanyName.toLowerCase()) {
+        companyFolderName = folder;
+        serial = parseInt(match[1], 10);
+        break;
+      }
+    }
+    if (!companyFolderName) {
+      // New company, assign next serial
+      const serials = existingFolders.map(f => parseInt(f.split('_')[0], 10)).filter(n => !isNaN(n));
+      serial = serials.length > 0 ? Math.max(...serials) + 1 : 1;
+      companyFolderName = `${serial}_${extractedCompanyName}`;
+    }
+    const companyFolder = path.join(resumeFolder, companyFolderName);
+    await fs.ensureDir(companyFolder);
+    
+         // Use the file serial number passed from frontend (same as CV)
+     const fileSerial = req.body.fileSerial || '1';
+    
+         // Get userName from request (default to 'cv')
+     let user = userName || 'cv';
+     // Ensure userName is file-safe (spaces to underscores)
+     user = user.trim().replace(/\s+/g, '_');
+    
+    // Build custom filename: <userName>_CoverLetter_<fileSerial>.docx
+    const downloadName = `${user}_CoverLetter_${fileSerial}.docx`;
+    const savePath = path.join(companyFolder, downloadName);
+    await fs.writeFile(savePath, coverLetterDocxBuffer);
+    
+              // Note: JD file is already saved by the CV generation, so we don't need to save it again
+     // The JD file will have the same serial number as the CV and cover letter
+     
+     // Return JSON with download URL, folder path, and openFolderPath (absolute)
+     res.json({
+       success: true,
+       downloadUrl: `/api/document/download?path=${encodeURIComponent(savePath)}`,
+       folderPath: companyFolder,
+       openFolderPath: path.resolve(companyFolder),
+       downloadName: downloadName,
+       savePath: savePath
+     })
+  } catch (error) {
+    console.error('Cover letter DOCX generation error:', error)
+    res.status(500).json({
+      error: 'Failed to generate cover letter DOCX',
+      message: error.message || error.toString(),
+      stack: error.stack
     })
   }
 })

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -15,6 +16,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -155,6 +157,205 @@ public class DocumentProcessingService {
         } catch (Exception e) {
             log.error("Error extracting text from document", e);
             throw new RuntimeException("Failed to extract text", e);
+        }
+    }
+
+    public byte[] generateCoverLetter(byte[] originalDocument, Object coverLetterData, String jobDescription) {
+        try {
+            // Create a completely new document for the cover letter
+            XWPFDocument document = new XWPFDocument();
+            
+            // Create cover letter content in the fresh document
+            createCoverLetterContent(document, coverLetterData);
+            
+            // Save the cover letter document
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            document.write(outputStream);
+            document.close();
+            
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            log.error("Error generating cover letter", e);
+            throw new RuntimeException("Failed to generate cover letter: " + e.getMessage(), e);
+        }
+    }
+
+    private void createCoverLetterContent(XWPFDocument document, Object coverLetterData) {
+        try {
+            if (coverLetterData instanceof Map) {
+                Map<String, Object> data = (Map<String, Object>) coverLetterData;
+                Map<String, Object> coverLetter = (Map<String, Object>) data.get("coverLetter");
+                
+                if (coverLetter != null) {
+                    // Add header information with professional formatting
+                    Map<String, Object> header = (Map<String, Object>) coverLetter.get("header");
+                    if (header != null) {
+                        // Add candidate name with professional styling
+                        if (header.get("candidateName") != null) {
+                            XWPFParagraph namePara = document.createParagraph();
+                            namePara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun nameRun = namePara.createRun();
+                            nameRun.setText(header.get("candidateName").toString());
+                            nameRun.setBold(true);
+                            nameRun.setFontSize(16);
+                            nameRun.setFontFamily("Calibri");
+                        }
+                        
+                        // Add designation/title if available
+                        if (header.get("designation") != null) {
+                            XWPFParagraph designationPara = document.createParagraph();
+                            designationPara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun designationRun = designationPara.createRun();
+                            designationRun.setText(header.get("designation").toString());
+                            designationRun.setFontSize(12);
+                            designationRun.setFontFamily("Calibri");
+                            designationRun.setColor("666666");
+                        }
+                        
+                        // Add contact information
+                        if (header.get("candidateEmail") != null) {
+                            XWPFParagraph emailPara = document.createParagraph();
+                            emailPara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun emailRun = emailPara.createRun();
+                            emailRun.setText(header.get("candidateEmail").toString());
+                            emailRun.setFontSize(11);
+                            emailRun.setFontFamily("Calibri");
+                        }
+                        
+                        if (header.get("candidatePhone") != null) {
+                            XWPFParagraph phonePara = document.createParagraph();
+                            phonePara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun phoneRun = phonePara.createRun();
+                            phoneRun.setText(header.get("candidatePhone").toString());
+                            phoneRun.setFontSize(11);
+                            phoneRun.setFontFamily("Calibri");
+                        }
+                        
+                        if (header.get("candidateAddress") != null) {
+                            XWPFParagraph addressPara = document.createParagraph();
+                            addressPara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun addressRun = addressPara.createRun();
+                            addressRun.setText(header.get("candidateAddress").toString());
+                            addressRun.setFontSize(11);
+                            addressRun.setFontFamily("Calibri");
+                        }
+                        
+                        // Add spacing
+                        XWPFParagraph spacingPara = document.createParagraph();
+                        spacingPara.setSpacingAfter(200);
+                        
+                        // Add date
+                        if (header.get("date") != null) {
+                            XWPFParagraph datePara = document.createParagraph();
+                            datePara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun dateRun = datePara.createRun();
+                            dateRun.setText(header.get("date").toString());
+                            dateRun.setFontSize(11);
+                            dateRun.setFontFamily("Calibri");
+                        }
+                        
+                        // Add company information
+                        if (header.get("companyName") != null) {
+                            XWPFParagraph companyPara = document.createParagraph();
+                            companyPara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun companyRun = companyPara.createRun();
+                            companyRun.setText(header.get("companyName").toString());
+                            companyRun.setFontSize(11);
+                            companyRun.setFontFamily("Calibri");
+                        }
+                        
+                        if (header.get("companyAddress") != null) {
+                            XWPFParagraph companyAddressPara = document.createParagraph();
+                            companyAddressPara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun companyAddressRun = companyAddressPara.createRun();
+                            companyAddressRun.setText(header.get("companyAddress").toString());
+                            companyAddressRun.setFontSize(11);
+                            companyAddressRun.setFontFamily("Calibri");
+                        }
+                        
+                        // Add spacing before salutation
+                        XWPFParagraph spacingPara2 = document.createParagraph();
+                        spacingPara2.setSpacingAfter(200);
+                    }
+                    
+                    // Add body content with professional formatting
+                    Map<String, Object> body = (Map<String, Object>) coverLetter.get("body");
+                    if (body != null) {
+                        // Add salutation
+                        if (body.get("salutation") != null) {
+                            XWPFParagraph salutationPara = document.createParagraph();
+                            salutationPara.setAlignment(ParagraphAlignment.LEFT);
+                            XWPFRun salutationRun = salutationPara.createRun();
+                            salutationRun.setText(body.get("salutation").toString());
+                            salutationRun.setFontSize(11);
+                            salutationRun.setFontFamily("Calibri");
+                        }
+                        
+                        // Add opening paragraph
+                        if (body.get("opening") != null) {
+                            XWPFParagraph openingPara = document.createParagraph();
+                            openingPara.setAlignment(ParagraphAlignment.BOTH);
+                            openingPara.setSpacingAfter(200);
+                            XWPFRun openingRun = openingPara.createRun();
+                            openingRun.setText(body.get("opening").toString());
+                            openingRun.setFontSize(11);
+                            openingRun.setFontFamily("Calibri");
+                        }
+                        
+                        // Add main content paragraphs
+                        if (body.get("mainContent") instanceof List) {
+                            List<String> mainContent = (List<String>) body.get("mainContent");
+                            for (String paragraph : mainContent) {
+                                if (paragraph != null && !paragraph.trim().isEmpty()) {
+                                    XWPFParagraph contentPara = document.createParagraph();
+                                    contentPara.setAlignment(ParagraphAlignment.BOTH);
+                                    contentPara.setSpacingAfter(200);
+                                    XWPFRun contentRun = contentPara.createRun();
+                                    contentRun.setText(paragraph);
+                                    contentRun.setFontSize(11);
+                                    contentRun.setFontFamily("Calibri");
+                                }
+                            }
+                        }
+                        
+                        // Add closing paragraph
+                        if (body.get("closing") != null) {
+                            XWPFParagraph closingPara = document.createParagraph();
+                            closingPara.setAlignment(ParagraphAlignment.BOTH);
+                            closingPara.setSpacingAfter(200);
+                            XWPFRun closingRun = closingPara.createRun();
+                            closingRun.setText(body.get("closing").toString());
+                            closingRun.setFontSize(11);
+                            closingRun.setFontFamily("Calibri");
+                        }
+                    }
+                    
+                    // Add professional signature
+                    if (coverLetter.get("signature") != null) {
+                        // Add spacing before signature
+                        XWPFParagraph spacingPara3 = document.createParagraph();
+                        spacingPara3.setSpacingAfter(200);
+                        
+                        // Add signature
+                        XWPFParagraph signaturePara = document.createParagraph();
+                        signaturePara.setAlignment(ParagraphAlignment.LEFT);
+                        XWPFRun signatureRun = signaturePara.createRun();
+                        signatureRun.setText(coverLetter.get("signature").toString());
+                        signatureRun.setFontSize(11);
+                        signatureRun.setFontFamily("Calibri");
+                    }
+                }
+            }
+            
+            // If no valid data structure, create a simple placeholder
+            if (document.getParagraphs().isEmpty()) {
+                XWPFParagraph placeholderPara = document.createParagraph();
+                XWPFRun placeholderRun = placeholderPara.createRun();
+                placeholderRun.setText("Cover Letter Content");
+            }
+        } catch (Exception e) {
+            log.error("Error creating cover letter content", e);
+            throw new RuntimeException("Failed to create cover letter content", e);
         }
     }
 } 

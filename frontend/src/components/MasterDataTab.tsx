@@ -13,6 +13,8 @@ interface MasterDataTabProps {
   masterCVName: string | null
   masterCVSize: string | null
   onClearMasterData: () => void
+  coverLetterTemplate: File | null
+  setCoverLetterTemplate: (file: File | null) => void
 }
 
 export default function MasterDataTab({ 
@@ -22,7 +24,9 @@ export default function MasterDataTab({
   setStructuredData,
   masterCVName,
   masterCVSize,
-  onClearMasterData
+  onClearMasterData,
+  coverLetterTemplate,
+  setCoverLetterTemplate
 }: MasterDataTabProps) {
   const [activeSection, setActiveSection] = React.useState<'cv' | 'structured'>('cv')
   const [isProcessing, setIsProcessing] = useState(false);
@@ -227,6 +231,89 @@ export default function MasterDataTab({
         {/* Preview area */}
         <div className="min-h-[400px]">
           <FilePreview file={masterCV} />
+        </div>
+      </div>
+
+      {/* Cover Letter Template Upload Section */}
+      <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Cover Letter Template (Optional)</h2>
+          <p className="text-gray-600 text-sm">
+            Upload a cover letter template in .docx format. This is optional and will be used as a reference for cover letter generation.
+          </p>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Cover Letter Template upload area */}
+          <div className="flex flex-col lg:flex-row items-center space-y-4 lg:space-y-0 lg:space-x-4">
+            <div
+              className={`border-2 border-dashed rounded-lg p-4 lg:p-6 text-center cursor-pointer transition-all duration-200 flex-1 w-full ${
+                coverLetterTemplate 
+                  ? 'border-green-500 bg-green-50 shadow-md' 
+                  : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
+              }`}
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.docx';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file && file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                    setCoverLetterTemplate(file);
+                    toast.success('Cover letter template uploaded successfully!');
+                  } else {
+                    toast.error('Please upload a .docx file');
+                  }
+                };
+                input.click();
+              }}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-green-600" />
+                </div>
+                
+                {coverLetterTemplate ? (
+                  <div className="text-left">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">Template Uploaded</p>
+                    </div>
+                    <p className="text-xs text-gray-600 font-mono truncate">{coverLetterTemplate.name}</p>
+                    <p className="text-xs text-gray-500">Size: {Math.round(coverLetterTemplate.size / 1024)} KB</p>
+                  </div>
+                ) : (
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-900">Upload Cover Letter Template</p>
+                    <p className="text-xs text-gray-500">Click to browse files (.docx)</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {coverLetterTemplate && (
+              <button
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-sm transition-colors duration-200 flex items-center space-x-2 text-sm w-full lg:w-auto"
+                onClick={() => setCoverLetterTemplate(null)}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Remove</span>
+              </button>
+            )}
+          </div>
+          
+          {/* Cover Letter Template Preview */}
+          {coverLetterTemplate && (
+            <div className="min-h-[200px]">
+              <FilePreview file={coverLetterTemplate} />
+            </div>
+          )}
         </div>
       </div>
     </div>

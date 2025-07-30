@@ -84,7 +84,19 @@ class GeminiService {
       return responseText
     } catch (error) {
       console.error('Gemini API error:', error.response?.data || error.message)
-      throw new Error(`Gemini API request failed: ${error.message}`)
+      
+      // Handle specific error cases
+      if (error.response?.status === 503) {
+        throw new Error('Gemini API is temporarily overloaded. Please try again in a few minutes.')
+      } else if (error.response?.status === 429) {
+        throw new Error('Rate limit exceeded. Please wait a moment before trying again.')
+      } else if (error.response?.status === 401) {
+        throw new Error('Invalid API key. Please check your Gemini API configuration.')
+      } else if (error.response?.status === 400) {
+        throw new Error('Invalid request to Gemini API. Please check your input data.')
+      } else {
+        throw new Error(`Gemini API request failed: ${error.message}`)
+      }
     }
   }
 
@@ -339,10 +351,194 @@ Return only the content for this section, no additional formatting or explanatio
 
     return await this.makeRequest(prompt)
   }
+
+  async generateCoverLetter(cvText, jobDescription, options = {}) {
+    const {
+      style = 'traditional',
+      tone = 'professional',
+      focusAreas = ['results', 'technical-skills'],
+      hiringManager = '',
+      companyName = '',
+      coverLetterTemplate = null,
+      jobSource = 'company website',
+      useTemplate = false
+    } = options;
+
+    // Use shared prompt template for consistency
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    let prompt;
+    let isUsingFallback = false;
+    
+    try {
+      // Read the shared prompt template
+      const promptTemplatePath = path.join(process.cwd(), '..', 'prompts', 'cover-letter-generation-shared.txt');
+      let promptTemplate = await fs.readFile(promptTemplatePath, 'utf8');
+      
+      // Replace placeholders with actual data
+      promptTemplate = promptTemplate
+        .replace('{cvText}', cvText)
+        .replace('{jobDescription}', jobDescription)
+        .replace('{coverLetterStyle}', style)
+        .replace('{tone}', tone)
+        .replace('{focusAreas}', focusAreas.join(', '))
+        .replace('{hiringManager}', hiringManager || 'Hiring Manager')
+        .replace('{companyName}', companyName || 'Company')
+        .replace('{jobSource}', jobSource)
+        .replace('{useTemplate}', useTemplate ? 'Yes' : 'No');
+      
+      prompt = promptTemplate;
+      console.log('✅ Using shared cover letter prompt template successfully');
+    } catch (error) {
+      console.warn('⚠️ Failed to read shared cover letter prompt template, using fallback:', error.message);
+      isUsingFallback = true;
+      
+      // Fallback prompt
+      prompt = `
+You are an expert cover letter writer specializing in ATS optimization and compelling storytelling.
+
+CV Content:
+${cvText}
+
+Job Description:
+${jobDescription}
+
+Cover Letter Style: ${style}
+Tone: ${tone}
+Focus Areas: ${focusAreas.join(', ')}
+Hiring Manager: ${hiringManager || 'Hiring Manager'}
+Company Name: ${companyName || 'Company'}
+Job Source: ${jobSource}
+Use Template: ${useTemplate ? 'Yes' : 'No'}
+
+Your task is to create a compelling cover letter that personalizes the candidate's story, demonstrates cultural fit, highlights relevant achievements, addresses specific job requirements, uses ATS-friendly language, and maintains professional tone.
+
+Please provide a JSON response with the following structure:
+
+{
+  "model": "YOUR_ACTUAL_MODEL_NAME_AND_VERSION",
+  "coverLetter": {
+    "header": {
+      "candidateName": "Full Name",
+      "candidateEmail": "email@example.com",
+      "candidatePhone": "phone number",
+      "date": "Current date",
+      "companyName": "Company Name",
+      "companyAddress": "Company address if available",
+      "hiringManagerName": "Hiring manager name if available"
+    },
+    "body": {
+      "opening": "Compelling opening paragraph that hooks the reader",
+      "mainContent": [
+        "First main paragraph focusing on key achievements and relevant experience",
+        "Second main paragraph addressing specific job requirements and cultural fit",
+        "Third main paragraph showing enthusiasm and future potential"
+      ],
+      "closing": "Strong closing paragraph with call to action"
+    },
+    "signature": "Professional signature"
+  },
+  "analysis": {
+    "keyThemes": ["theme1", "theme2", "theme3"],
+    "achievementsHighlighted": ["achievement1", "achievement2"],
+    "keywordsIncluded": ["keyword1", "keyword2"],
+    "culturalFitElements": ["element1", "element2"],
+    "atsOptimizationScore": 85
+  },
+  "customization": {
+    "personalizedElements": ["element1", "element2"],
+    "companySpecificReferences": ["reference1", "reference2"],
+    "roleSpecificConnections": ["connection1", "connection2"]
+  },
+  "recommendations": [
+    "Consider adding specific project examples",
+    "Include metrics from your most relevant experience",
+    "Mention any industry certifications or training"
+  ]
+}
+
+Return only the JSON object, no additional text or explanations.
+`;
+    }
+
+    const response = await this.makeRequest(prompt)
+    console.log('Raw Gemini cover letter response:', response)
+    
+    try {
+      // Extract JSON from response - handle markdown code blocks
+      let jsonText = response;
+      
+      // Remove markdown code block markers if present
+      if (jsonText.includes('```json')) {
+        jsonText = jsonText.replace(/```json\s*/, '').replace(/\s*```$/, '');
+        console.log('🔧 Removed ```json markers');
+      } else if (jsonText.includes('```')) {
+        jsonText = jsonText.replace(/```\s*/, '').replace(/\s*```$/, '');
+        console.log('🔧 Removed ``` markers');
+      }
+      
+      console.log('🔧 JSON text after cleanup (first 200 chars):', jsonText.substring(0, 200) + '...');
+      
+      // Try to find JSON object
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        let parsed = JSON.parse(jsonMatch[0])
+        parsed.isFallback = isUsingFallback
+        parsed.promptSource = isUsingFallback ? 'fallback' : 'shared-template'
+        
+        // Add model information if not present
+        if (!parsed.model) {
+          parsed.model = 'Gemini 1.5 Flash'
+        }
+        
+        return parsed
+      }
+      throw new Error('No valid JSON found in response')
+    } catch (parseError) {
+      console.error('Failed to parse Gemini cover letter response:', parseError)
+      console.error('Response that failed to parse:', response)
+      // Return fallback cover letter
+      return {
+        model: 'Gemini 1.5 Flash',
+        coverLetter: {
+          header: {
+            candidateName: 'Your Name',
+            candidateEmail: 'your.email@example.com',
+            candidatePhone: 'Your Phone',
+            date: new Date().toISOString().split('T')[0],
+            companyName: companyName || 'Company',
+            companyAddress: 'Company Address',
+            hiringManagerName: hiringManager || 'Hiring Manager'
+          },
+          body: {
+            opening: 'I am writing to express my strong interest in the position at your company.',
+            mainContent: [
+              'Based on my experience and the requirements of this role, I believe I would be an excellent fit for your team.',
+              'I am particularly excited about the opportunity to contribute to your company\'s mission and values.',
+              'I look forward to discussing how my background and skills align with your needs.'
+            ],
+            closing: 'Thank you for considering my application. I look forward to hearing from you.'
+          },
+          signature: 'Sincerely,\nYour Name'
+        },
+        analysis: {
+          keyThemes: ['professional', 'enthusiastic', 'qualified'],
+          achievementsHighlighted: ['experience', 'skills'],
+          keywordsIncluded: ['position', 'company', 'team'],
+          culturalFitElements: ['mission', 'values'],
+          atsOptimizationScore: 75
+        },
+        isFallback: true,
+        promptSource: 'fallback'
+      }
+    }
+  }
 }
 
 const geminiService = new GeminiService()
 
 export const analyzeJobDescription = (jobDescription) => geminiService.analyzeJobDescription(jobDescription)
 export const optimizeCV = (cvText, jobDescription, structuredData) => geminiService.optimizeCV(cvText, jobDescription, structuredData)
-export const generateSectionContent = (section, jobDescription, context) => geminiService.generateSectionContent(section, jobDescription, context) 
+export const generateSectionContent = (section, jobDescription, context) => geminiService.generateSectionContent(section, jobDescription, context)
+export const generateCoverLetter = (cvText, jobDescription, options) => geminiService.generateCoverLetter(cvText, jobDescription, options) 

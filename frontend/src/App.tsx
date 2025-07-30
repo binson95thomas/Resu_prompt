@@ -29,6 +29,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [masterCV, setMasterCV] = useState<File | null>(null);
+  const [coverLetterTemplate, setCoverLetterTemplate] = useState<File | null>(null);
   const [structuredData, setStructuredData] = useState<any>(() => {
     const saved = localStorage.getItem('structuredData');
     return saved ? JSON.parse(saved) : { skills: [], experience: [], education: [] };
@@ -177,6 +178,7 @@ export default function App() {
   // Clear master data handler
   const handleClearMasterData = () => {
     setMasterCV(null);
+    setCoverLetterTemplate(null);
     setStructuredData({ skills: [], experience: [], education: [] });
     setOptimizationResults(null);
     setJobDescription('');
@@ -448,37 +450,41 @@ export default function App() {
       <div className={`flex-1 flex flex-col min-w-0 lg:transition-all lg:duration-300`}>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 md:p-12 bg-gray-50 mobile-padding">
           <div className="max-w-7xl mx-auto">
-            {activeTab === 'master' && (
-              <MasterDataTab
-                masterCV={masterCV}
-                setMasterCV={setMasterCV}
+          {activeTab === 'master' && (
+            <MasterDataTab
+              masterCV={masterCV}
+              setMasterCV={setMasterCV}
                 structuredData={structuredData}
                 setStructuredData={setStructuredData}
                 masterCVName={masterCVName}
                 masterCVSize={masterCVSize}
                 onClearMasterData={handleClearMasterData}
-              />
-            )}
-            {activeTab === 'job' && (
-              <JobDescriptionTab
-                jobDescription={jobDescription}
-                setJobDescription={setJobDescription}
+                coverLetterTemplate={coverLetterTemplate}
+                setCoverLetterTemplate={setCoverLetterTemplate}
+            />
+          )}
+          {activeTab === 'job' && (
+            <JobDescriptionTab
+              jobDescription={jobDescription}
+              setJobDescription={setJobDescription}
                 setChatHistory={setChatHistory}
                 incrementApiHits={incrementApiHits}
-              />
-            )}
-            {activeTab === 'generate' && (
-              <GenerateCVTab
-                masterCV={masterCV}
-                jobDescription={jobDescription}
-                optimizationResults={optimizationResults}
-                setOptimizationResults={setOptimizationResults}
+            />
+          )}
+          {activeTab === 'generate' && (
+            <GenerateCVTab
+              masterCV={masterCV}
+              jobDescription={jobDescription}
+              optimizationResults={optimizationResults}
+              setOptimizationResults={setOptimizationResults}
                 setChatHistory={setChatHistory}
                 incrementApiHits={incrementApiHits}
-              />
-            )}
-          </div>
-        </main>
+                coverLetterTemplate={coverLetterTemplate}
+                setActiveTab={setActiveTab}
+            />
+          )}
+        </div>
+      </main>
         <SettingsModal
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
@@ -524,4 +530,4 @@ export default function App() {
       </div>
     </div>
   );
-} 
+}

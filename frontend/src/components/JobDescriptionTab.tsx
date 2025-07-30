@@ -115,16 +115,16 @@ export default function JobDescriptionTab({
       setIsAnalyzing(false)
       setIsCached(false)
       incrementApiHits(); // Increment API hits on successful call
-              setChatHistory(prev => [
-          ...prev,
-          {
-            question: jobDescription,
-            answer: JSON.stringify(data, null, 2),
-            timestamp: new Date().toISOString(),
-            model: 'Gemini 1.5 Flash',
-            promptSource: 'API'
-          }
-        ])
+      setChatHistory(prev => [
+        ...prev,
+        {
+          question: jobDescription,
+          answer: JSON.stringify(data, null, 2),
+          timestamp: new Date().toISOString(),
+          model: 'Gemini 1.5 Flash',
+          promptSource: 'API'
+        }
+      ])
       // Cache the result
       localStorage.setItem(cacheKey, JSON.stringify(data.analysis));
     } catch (error: any) {

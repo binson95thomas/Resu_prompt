@@ -134,6 +134,37 @@ class DocumentService {
       throw new Error(`Failed to preserve document formatting: ${error.message}`)
     }
   }
+
+  async generateCoverLetterDocx(originalFilePath, coverLetterData, jobDescription) {
+    try {
+      // Read the original file
+      const originalBuffer = await fs.readFile(originalFilePath)
+      
+      // Call the Java document service to generate cover letter
+      const response = await axios.post(`${this.docServiceUrl}/api/document/generate-cover-letter`, {
+        originalFile: originalBuffer.toString('base64'),
+        coverLetterData: coverLetterData,
+        jobDescription: jobDescription
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout
+      })
+
+      if (response.data && response.data.document) {
+        return Buffer.from(response.data.document, 'base64')
+      } else {
+        throw new Error('Invalid response from document service')
+      }
+    } catch (error) {
+      console.error('Error generating cover letter DOCX:', error)
+      if (error.code === 'ECONNREFUSED') {
+        throw new Error('Document service is not running. Please start the Java service.')
+      }
+      throw new Error(`Failed to generate cover letter DOCX: ${error.message}`)
+    }
+  }
 }
 
 const documentService = new DocumentService()
@@ -143,4 +174,6 @@ export const generateOptimizedDocx = (filePath, acceptedEdits, suggestedEdits, j
   documentService.generateOptimizedDocx(filePath, acceptedEdits, suggestedEdits, jobDescription, previewMode)
 export const exportToPDF = (docxBuffer) => documentService.exportToPDF(docxBuffer)
 export const applyEditsToDocument = (originalBuffer, edits) => documentService.applyEditsToDocument(originalBuffer, edits)
-export const preserveFormatting = (originalBuffer, newContent) => documentService.preserveFormatting(originalBuffer, newContent) 
+export const preserveFormatting = (originalBuffer, newContent) => documentService.preserveFormatting(originalBuffer, newContent)
+export const generateCoverLetterDocx = (filePath, coverLetterData, jobDescription) => 
+  documentService.generateCoverLetterDocx(filePath, coverLetterData, jobDescription) 

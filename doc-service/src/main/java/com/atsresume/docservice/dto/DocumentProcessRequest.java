@@ -16,4 +16,5 @@ public class DocumentProcessRequest {
     private List<Integer> acceptedEdits;
     private List<SuggestedEdit> suggestedEdits;
     private String jobDescription;
+    private Object coverLetterData; // For cover letter generation
 } 

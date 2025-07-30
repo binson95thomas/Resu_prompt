@@ -80,6 +80,41 @@ public class DocumentController {
         }
     }
 
+    @PostMapping("/generate-cover-letter")
+    public ResponseEntity<DocumentProcessResponse> generateCoverLetter(@RequestBody DocumentProcessRequest request) {
+        try {
+            byte[] originalDocument = Base64.getDecoder().decode(request.getOriginalFile());
+            byte[] coverLetterDocument = documentProcessingService.generateCoverLetter(
+                originalDocument,
+                request.getCoverLetterData(),
+                request.getJobDescription()
+            );
+
+            DocumentProcessResponse response = DocumentProcessResponse.builder()
+                .document(Base64.getEncoder().encodeToString(coverLetterDocument))
+                .success(true)
+                .message("Cover letter generated successfully")
+                .build();
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            DocumentProcessResponse response = DocumentProcessResponse.builder()
+                .success(false)
+                .message("Invalid document format: " + e.getMessage())
+                .build();
+
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error generating cover letter", e);
+            DocumentProcessResponse response = DocumentProcessResponse.builder()
+                .success(false)
+                .message("Failed to generate cover letter: " + e.getMessage())
+                .build();
+
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Document Service is running");
