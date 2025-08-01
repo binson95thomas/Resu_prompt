@@ -177,8 +177,8 @@ export default function JobDescriptionTab({
       {error && <div className="bg-red-100 text-red-800 rounded p-2 mb-2">{error}</div>}
       {analysis && (
         <div className="space-y-6 mt-6">
-          <div className="bg-blue-50 border-l-4 border-blue-400 rounded p-4">
-            <h3 className="font-semibold mb-2 flex items-center text-blue-800"><Briefcase className="w-5 h-5 mr-2" />Summary</h3>
+          <div className="bg-gradient-to-r from-ocean-50 to-cyan-50 border-l-4 border-ocean-400 rounded p-4">
+                          <h3 className="font-semibold mb-2 flex items-center text-ocean-800"><Briefcase className="w-5 h-5 mr-2" />Summary</h3>
             <div>{analysis.summary || 'No summary available.'}</div>
           </div>
           <div className="bg-green-50 border-l-4 border-green-400 rounded p-4">
@@ -188,7 +188,7 @@ export default function JobDescriptionTab({
                 {analysis.keywords.map((kw: string, i: number) => (
                   <span
                     key={i}
-                    className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow"
+                    className="bg-gradient-to-r from-ocean-500 to-ocean-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     {kw}
                   </span>

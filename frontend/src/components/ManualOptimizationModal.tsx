@@ -83,9 +83,9 @@ export default function ManualOptimizationModal({
           </div>
 
           {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-3">Manual Generation Instructions:</h4>
-            <ol className="text-sm text-blue-800 space-y-2">
+          <div className="bg-gradient-to-r from-ocean-50 to-cyan-50 border border-ocean-200 rounded-lg p-4">
+                          <h4 className="font-medium text-ocean-900 mb-3">Manual Generation Instructions:</h4>
+              <ol className="text-sm text-ocean-800 space-y-2">
               <li>1. Click "Copy Prompt" to get the complete generation prompt</li>
               <li>2. Paste it into any AI model (ChatGPT, Claude, etc.)</li>
               <li>3. Get the JSON response from the AI (make sure it includes the "model" field)</li>

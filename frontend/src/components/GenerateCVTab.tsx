@@ -415,6 +415,8 @@ export default function GenerateCVTab({
 
   // Helper function to create formatted cover letter preview
   const createCoverLetterPreview = (coverLetterText: string) => {
+
+    
     const currentDate = new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: '2-digit', 
@@ -426,25 +428,85 @@ export default function GenerateCVTab({
       ? 'Cambridge Biomedical Campus, Cambridge, UK'
       : 'Company Address'
 
-    // Split the cover letter into sections
+    // Try to parse as JSON first (for AI-generated responses)
+    try {
+      const jsonData = JSON.parse(coverLetterText)
+      if (jsonData.coverLetter) {
+        const coverLetter = jsonData.coverLetter
+        const body = coverLetter.body
+        
+        // Construct the body content from JSON structure
+        let bodyContent = ''
+        if (body.salutation) bodyContent += body.salutation + '\n\n'
+        if (body.opening) bodyContent += body.opening + '\n\n'
+        if (body.mainContent && Array.isArray(body.mainContent)) {
+          body.mainContent.forEach((paragraph: string) => {
+            if (paragraph && paragraph.trim()) {
+              bodyContent += paragraph + '\n\n'
+            }
+          })
+        }
+        if (body.closing) bodyContent += body.closing + '\n\n'
+        
+        return {
+          header: {
+            candidateName: coverLetter.header?.candidateName || userName || 'Binson Sam Thomas',
+            candidateEmail: coverLetter.header?.candidateEmail || 'binson.sam.thomas@gmail.com',
+            candidatePhone: coverLetter.header?.candidatePhone || '+44 7891 234567',
+            candidateAddress: coverLetter.header?.candidateAddress || 'Hatfield, Hertfordshire, UK',
+            date: coverLetter.header?.date || currentDate,
+            companyName: coverLetter.header?.companyName || extractedCompanyName,
+            companyAddress: coverLetter.header?.companyAddress || extractedCompanyAddress
+          },
+          body: bodyContent.trim(),
+          signature: coverLetter.signature || 'Warm regards,\n\n' + (userName || 'Binson Sam Thomas') + '\nData Science Graduate, AI/ML Engineer, PL/SQL Developer\nbinson.sam.thomas@gmail.com'
+        }
+      }
+    } catch (e) {
+      // If not JSON, treat as plain text - this is now the normal case
+    }
+
+    // Parse the processed cover letter text
     const lines = coverLetterText.split('\n')
-    const header: string[] = []
     const body: string[] = []
     const signature: string[] = []
     
     let currentSection = 'body'
+    let foundSalutation = false
+    let foundSignature = false
     
-    for (const line of lines) {
-      if (line.includes('Warm regards') || line.includes('Sincerely')) {
-        currentSection = 'signature'
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      
+      // Check if we've found the salutation (Dear...)
+      if (line.includes('Dear') && !foundSalutation) {
+        foundSalutation = true
+        currentSection = 'body'
+        body.push(line) // Include salutation in body
+        continue
       }
       
+      // Check if we've found the signature section
+      if ((line.includes('Warm regards') || line.includes('Sincerely') || line.includes('Best regards')) && !foundSignature) {
+        foundSignature = true
+        currentSection = 'signature'
+        signature.push(line)
+        continue
+      }
+      
+      // Categorize lines based on current section
       if (currentSection === 'body') {
         body.push(line)
       } else if (currentSection === 'signature') {
         signature.push(line)
       }
     }
+
+    // Extract body and signature from the processed text
+    const bodyText = body.join('\n')
+    const signatureText = signature.join('\n')
+
+
 
     return {
       header: {
@@ -456,8 +518,8 @@ export default function GenerateCVTab({
         companyName: extractedCompanyName,
         companyAddress: extractedCompanyAddress
       },
-      body: body.join('\n'),
-      signature: signature.join('\n')
+      body: bodyText.trim(),
+      signature: signatureText.trim()
     }
   }
 
@@ -662,68 +724,48 @@ export default function GenerateCVTab({
       
       // Safely construct the cover letter content
       const coverLetterData = data.coverLetter // The actual cover letter data is nested
-      const opening = coverLetterData?.body?.opening || ''
-      const mainContent = coverLetterData?.body?.mainContent || []
-      const closing = coverLetterData?.body?.closing || ''
-      const signature = coverLetterData?.signature || ''
       
-      // Create a properly formatted cover letter
-      let coverLetterText = ''
+      console.log('=== COVER LETTER DEBUGGING ===')
+      console.log('Full data object:', data)
+      console.log('data.coverLetter:', data.coverLetter)
+      console.log('Raw coverLetterData:', coverLetterData)
+      console.log('coverLetterData keys:', Object.keys(coverLetterData || {}))
+      console.log('coverLetterData.coverLetter:', coverLetterData?.coverLetter)
+      console.log('coverLetterData.coverLetter.body:', coverLetterData?.coverLetter?.body)
+      console.log('coverLetterData.coverLetter.body keys:', Object.keys(coverLetterData?.coverLetter?.body || {}))
       
-      // Add header if available
-      if (coverLetterData?.header) {
-        const header = coverLetterData.header
-        if (header.candidateName) coverLetterText += `${header.candidateName}\n`
-        if (header.candidateEmail) coverLetterText += `${header.candidateEmail}\n`
-        if (header.candidatePhone) coverLetterText += `${header.candidatePhone}\n`
-        if (header.candidateAddress) coverLetterText += `${header.candidateAddress}\n`
-        coverLetterText += '\n'
-        if (header.date) coverLetterText += `${header.date}\n`
-        coverLetterText += '\n'
-        if (header.companyName) coverLetterText += `${header.companyName}\n`
-        if (header.companyAddress) coverLetterText += `${header.companyAddress}\n`
-        coverLetterText += '\n'
-      }
+      const salutation = coverLetterData?.coverLetter?.body?.salutation || ''
+      const opening = coverLetterData?.coverLetter?.body?.opening || ''
+      const mainContent = coverLetterData?.coverLetter?.body?.mainContent || []
+      const closing = coverLetterData?.coverLetter?.body?.closing || ''
+      const signature = coverLetterData?.coverLetter?.signature || ''
       
-      // Add salutation
-      const salutation = coverLetterData?.body?.salutation || 'Dear Hiring Manager,'
-      coverLetterText += `${salutation}\n\n`
+      console.log('Extracted values:', { salutation, opening, mainContent, closing, signature })
+      console.log('=== END DEBUGGING ===')
       
-      // Add opening
-      if (opening) {
-        coverLetterText += `${opening}\n\n`
-      }
-      
-      // Add main content paragraphs
-      if (mainContent && Array.isArray(mainContent)) {
-        mainContent.forEach(paragraph => {
-          if (paragraph && paragraph.trim()) {
-            coverLetterText += `${paragraph}\n\n`
-          }
-        })
-      }
-      
-      // Add closing
-      if (closing) {
-        coverLetterText += `${closing}\n\n`
-      }
-      
-                      // Add signature with proper formatting
-                if (signature) {
-                  coverLetterText += '\n\n' + signature
-                } else {
-                  // Fallback signature if none provided
-                  coverLetterText += '\n\nWarm regards,\n\n' + (userName || 'Binson Sam Thomas') + '\nData Science Graduate, AI/ML Engineer, PL/SQL Developer\nbinson.sam.thomas@gmail.com'
-                }
 
-                // Clean up extra newlines
-                coverLetterText = coverLetterText.replace(/\n{3,}/g, '\n\n').trim()
-                
-                // Ensure the cover letter has a proper signature
-                if (!coverLetterText.includes('Warm regards') && !coverLetterText.includes('Sincerely')) {
-                  coverLetterText += '\n\nWarm regards,\n\n' + (userName || 'Binson Sam Thomas') + '\nData Science Graduate, AI/ML Engineer, PL/SQL Developer\nbinson.sam.thomas@gmail.com'
-                }
+      
+            // Create a properly formatted cover letter using the same approach as manual generation
+      console.log('Processing cover letter data:', {
+        salutation,
+        opening,
+        mainContent,
+        closing,
+        signature,
+        fullCoverLetterData: coverLetterData
+      })
+      
+      const coverLetterText = [
+        salutation,
+        opening,
+        ...mainContent,
+        closing,
+        signature
+      ].filter(text => text && text.trim() !== '').join('\n\n')
+      
+      console.log('Final cover letter text:', coverLetterText)
 
+                // Store the processed cover letter text for preview
                 setEditedCoverLetter(coverLetterText)
                 setShowCoverLetterEditor(true)
       
@@ -748,6 +790,7 @@ export default function GenerateCVTab({
         }
       ])
       
+      incrementApiHits(); // Increment API hits on successful cover letter generation
       toast.success('Cover letter generated successfully!')
     } catch (error: any) {
       let errorMessage = 'Failed to generate cover letter'
@@ -1207,7 +1250,7 @@ Return only the JSON object, no additional text or explanations.`
               setIsManualCoverLetter(false)
               setShowManualOptimization(!showManualOptimization)
             }}
-            className={`btn-secondary w-full lg:w-auto ${showManualOptimization ? 'bg-blue-100 text-blue-800' : ''}`}
+            className={`btn-secondary w-full lg:w-auto ${showManualOptimization ? 'bg-gradient-to-r from-ocean-100 to-cyan-100 text-ocean-800 shadow-md' : ''}`}
             disabled={!masterCV || !jobDescription.trim()}
           >
             Manual Optimization
@@ -1679,7 +1722,7 @@ Return only the JSON object, no additional text or explanations.`
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleToggleEdit(index)}
-                          className={`px-3 py-1 rounded text-sm ${acceptedEdits.has(index) ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 hover:from-gray-300 hover:to-gray-400'} transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105`}
+                          className={`px-3 py-1 rounded text-sm ${acceptedEdits.has(index) ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700' : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 hover:from-gray-300 hover:to-gray-400'} transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105`}
                         >
                           {acceptedEdits.has(index) ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                         </button>
@@ -1741,7 +1784,7 @@ Return only the JSON object, no additional text or explanations.`
               </div>
                         <button
                 onClick={() => setCoverLetterExpanded(!coverLetterExpanded)}
-                className={`px-3 py-1 rounded text-sm ${coverLetterExpanded ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700'} transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105`}
+                className={`px-3 py-1 rounded text-sm ${coverLetterExpanded ? 'bg-gradient-to-r from-ocean-500 to-ocean-600 text-white' : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700'} transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105`}
               >
                 {coverLetterExpanded ? 'Collapse' : 'Expand'}
                         </button>
@@ -1750,16 +1793,16 @@ Return only the JSON object, no additional text or explanations.`
             {coverLetterExpanded && (
               <div className="space-y-4">
                 {/* Source Data Summary */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">Source Data</h4>
+                <div className="bg-gradient-to-r from-ocean-50 to-cyan-50 border border-ocean-200 rounded-lg p-4">
+                  <h4 className="font-medium text-ocean-900 mb-2">Source Data</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-blue-700">CV:</span>
-                      <p className="text-blue-800">{masterCV?.name || 'Not uploaded'}</p>
+                      <span className="font-medium text-ocean-700">CV:</span>
+                      <p className="text-ocean-800">{masterCV?.name || 'Not uploaded'}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-blue-700">Job Description:</span>
-                      <p className="text-blue-800">{jobDescription.substring(0, 50)}...</p>
+                      <span className="font-medium text-ocean-700">Job Description:</span>
+                      <p className="text-ocean-800">{jobDescription.substring(0, 50)}...</p>
                     </div>
                       </div>
                     </div>
@@ -1911,26 +1954,27 @@ Return only the JSON object, no additional text or explanations.`
                             
                             {/* Body - Editable */}
                             <div className="text-left">
-                              <div 
-                                className="whitespace-pre-wrap leading-relaxed outline-none focus:ring-2 focus:ring-blue-200 rounded p-2" 
-                                contentEditable 
-                                suppressContentEditableWarning
-                                onBlur={(e) => {
-                                  const newBody = e.currentTarget.textContent || ''
-                                  // Update the editedCoverLetter with the new body content
-                                  const lines = editedCoverLetter.split('\n')
-                                  const bodyStartIndex = lines.findIndex(line => line.includes('Dear'))
-                                  const signatureStartIndex = lines.findIndex(line => line.includes('Warm regards'))
-                                  
-                                  if (bodyStartIndex !== -1 && signatureStartIndex !== -1) {
-                                    const header = lines.slice(0, bodyStartIndex)
-                                    const signature = lines.slice(signatureStartIndex)
-                                    const updatedCoverLetter = [...header, newBody, ...signature].join('\n')
-                                    setEditedCoverLetter(updatedCoverLetter)
-                                  }
-                                }}
-                                dangerouslySetInnerHTML={{ __html: createCoverLetterPreview(editedCoverLetter).body }}
-                              />
+                                                              <div 
+                                  className="whitespace-pre-wrap leading-relaxed outline-none focus:ring-2 focus:ring-blue-200 rounded p-2" 
+                                  contentEditable 
+                                  suppressContentEditableWarning
+                                  onBlur={(e) => {
+                                    const newBody = e.currentTarget.textContent || ''
+                                    // Update the editedCoverLetter with the new body content
+                                    const lines = editedCoverLetter.split('\n')
+                                    const bodyStartIndex = lines.findIndex(line => line.includes('Dear'))
+                                    const signatureStartIndex = lines.findIndex(line => line.includes('Warm regards'))
+                                    
+                                    if (bodyStartIndex !== -1 && signatureStartIndex !== -1) {
+                                      const header = lines.slice(0, bodyStartIndex)
+                                      const signature = lines.slice(signatureStartIndex)
+                                      const updatedCoverLetter = [...header, newBody, ...signature].join('\n')
+                                      setEditedCoverLetter(updatedCoverLetter)
+                                    }
+                                  }}
+                                >
+                                  {createCoverLetterPreview(editedCoverLetter).body}
+                                </div>
                             </div>
                             
                             {/* Signature - Read Only */}

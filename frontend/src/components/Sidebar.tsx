@@ -72,7 +72,7 @@ export default function Sidebar({
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileMenuOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-md shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-gradient-to-r from-ocean-500 to-ocean-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
       >
         <Menu className="w-6 h-6" />
       </button>
