@@ -217,9 +217,10 @@ interface GenerateCVTabProps {
   optimizationResults: any
   setOptimizationResults: (results: any) => void
   setChatHistory: (fn: (prev: any[]) => any[]) => void
-  incrementApiHits: () => void
+  incrementApiHits: (provider?: string) => void
   coverLetterTemplate: File | null
-  setActiveTab: (tab: 'master' | 'job' | 'generate') => void
+  setActiveTab: (tab: 'master' | 'job' | 'generate' | 'jobhunt') => void
+  setCurrentApiProvider: (provider: string | null) => void
 }
 
 export default function GenerateCVTab({ 
@@ -230,7 +231,8 @@ export default function GenerateCVTab({
   setChatHistory,
   incrementApiHits,
   coverLetterTemplate,
-  setActiveTab
+  setActiveTab,
+  setCurrentApiProvider
 }: GenerateCVTabProps) {
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -244,6 +246,7 @@ export default function GenerateCVTab({
   })
   const [optimizationProgress, setOptimizationProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  // Remove local currentProvider state since we're using the global one
   const [successFolderPath, setSuccessFolderPath] = useState<string | null>(null);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
   const [copyTooltip, setCopyTooltip] = useState<string>('Copy Path');
@@ -304,6 +307,7 @@ export default function GenerateCVTab({
     setIsOptimizing(true)
     setError(null)
     setOptimizationProgress(0)
+    setCurrentApiProvider('Gemini API 1.5 Flash')
     
     // Simulate progress updates
     const progressInterval = setInterval(() => {
@@ -372,9 +376,10 @@ export default function GenerateCVTab({
         }
       ])
       
-      incrementApiHits(); // Increment API hits on successful call
-        setIsOptimizing(false)
-        toast.success('CV optimization completed!')
+      incrementApiHits('gemini'); // Increment API hits on successful call
+      setIsOptimizing(false)
+      setCurrentApiProvider(null)
+      toast.success('CV optimization completed!')
     } catch (error: any) {
       console.error('Optimization failed:', error)
       
@@ -395,6 +400,7 @@ export default function GenerateCVTab({
       
       setError(errorMessage)
       setIsOptimizing(false)
+      setCurrentApiProvider(null)
       setOptimizationProgress(0)
       toast.error(errorMessage)
     }
@@ -551,7 +557,7 @@ export default function GenerateCVTab({
       // Send model information
       formData.append('modelUsed', optimizationResults?.model || 'Gemini 2.0 Flash');
       // Send jobDetails if available
-      if (optimizationResults && optimizationResults.jobDetails) {
+      if (optimizationResults?.jobDetails) {
         formData.append('jobDetails', JSON.stringify(optimizationResults.jobDetails));
       }
       const resumeFolder = localStorage.getItem('resumeFolder') || ''
@@ -691,6 +697,7 @@ export default function GenerateCVTab({
 
     setIsGeneratingCoverLetter(true)
     setError('')
+    setCurrentApiProvider('Gemini API 1.5 Flash')
 
     try {
       const formData = new FormData()
@@ -790,7 +797,7 @@ export default function GenerateCVTab({
         }
       ])
       
-      incrementApiHits(); // Increment API hits on successful cover letter generation
+      incrementApiHits('gemini'); // Increment API hits on successful cover letter generation
       toast.success('Cover letter generated successfully!')
     } catch (error: any) {
       let errorMessage = 'Failed to generate cover letter'
@@ -822,6 +829,7 @@ export default function GenerateCVTab({
       toast.error(errorMessage)
     } finally {
       setIsGeneratingCoverLetter(false)
+      setCurrentApiProvider(null)
     }
   }
 
@@ -950,7 +958,7 @@ export default function GenerateCVTab({
   const handleRecalculate = async () => {
     try {
       // Use the original CV text from optimizationResults.cvText, apply accepted edits
-      const originalCVText = optimizationResults.cvText || '';
+      const originalCVText = optimizationResults?.cvText || '';
       const updatedCVText = applyEditsToCV(originalCVText, suggestedEdits, acceptedEdits);
       const response = await fetch('/api/optimize/suggestions', {
         method: 'POST',
@@ -969,7 +977,7 @@ export default function GenerateCVTab({
       const data = await response.json()
       setOptimizationResults(data.suggestions || data)
       setSuggestedEdits((data.suggestions || data).suggestedEdits || [])
-      incrementApiHits(); // Increment API hits for recalculate
+      incrementApiHits('gemini'); // Increment API hits for recalculate (uses Gemini by default)
       if ((data.suggestions || data).predictedMatchScoreIfKeywordsAdded) {
         toast.success(`Predicted match score if keywords added: ${(data.suggestions || data).predictedMatchScoreIfKeywordsAdded}%`)
       }
@@ -1235,7 +1243,7 @@ Return only the JSON object, no additional text or explanations.`
     <div className="bg-white rounded-lg shadow p-6 max-w-screen-lg mx-auto">
       <h2 className="text-xl font-bold mb-4 flex items-center"><Download className="mr-2" /> CV Optimization</h2>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 space-y-4 lg:space-y-0">
-        <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Generate Optimized CV</h2>
+        <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Save Optimized CV</h2>
         <div className="flex flex-col lg:flex-row items-center space-y-2 lg:space-y-0 lg:space-x-3 w-full lg:w-auto">
         <button
           onClick={handleOptimize}
@@ -1303,14 +1311,14 @@ Return only the JSON object, no additional text or explanations.`
                     <p className="text-sm text-blue-700">How well your CV matches the job description</p>
               </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-blue-600">{optimizationResults.matchScore || 0}%</div>
+                    <div className="text-3xl font-bold text-blue-600">{optimizationResults?.matchScore || 0}%</div>
                     <div className="text-xs text-blue-500">out of 100</div>
                   </div>
                 </div>
               </div>
 
               {/* Job Details Section */}
-              {optimizationResults.jobDetails && (
+              {optimizationResults?.jobDetails && (
                 <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-gray-900 flex items-center">
@@ -1339,7 +1347,7 @@ Return only the JSON object, no additional text or explanations.`
                         </div>
                         <div>
                           <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Company</p>
-                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.company}</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults?.jobDetails?.company}</p>
                         </div>
                       </div>
                       
@@ -1352,7 +1360,7 @@ Return only the JSON object, no additional text or explanations.`
                         </div>
                         <div>
                           <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Location</p>
-                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.location}</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults?.jobDetails?.location}</p>
                         </div>
                       </div>
                     </div>
@@ -1367,7 +1375,7 @@ Return only the JSON object, no additional text or explanations.`
                         </div>
                         <div>
                           <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Job Type</p>
-                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.jobType}</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults?.jobDetails?.jobType}</p>
                         </div>
                       </div>
                       
@@ -1379,14 +1387,14 @@ Return only the JSON object, no additional text or explanations.`
                         </div>
                         <div>
                           <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Contract</p>
-                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.contractLength || 'Not specified'}</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults?.jobDetails?.contractLength || 'Not specified'}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Salary - Full Width */}
-                  {optimizationResults.jobDetails.salary && (
+                  {optimizationResults?.jobDetails?.salary && (
                     <div className="mt-6">
                       <div className="flex items-center p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border border-yellow-100">
                         <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mr-4">
@@ -1396,14 +1404,14 @@ Return only the JSON object, no additional text or explanations.`
                         </div>
                         <div>
                           <p className="text-xs font-medium text-yellow-600 uppercase tracking-wide">Salary</p>
-                          <p className="text-lg font-semibold text-gray-900">{optimizationResults.jobDetails.salary}</p>
+                          <p className="text-lg font-semibold text-gray-900">{optimizationResults?.jobDetails?.salary}</p>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Additional Info - Full Width */}
-                  {optimizationResults.jobDetails.other && (
+                  {optimizationResults?.jobDetails?.other && (
                     <div className="mt-6">
                       <div className="p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-200">
                         <div className="flex items-start">
@@ -1414,7 +1422,7 @@ Return only the JSON object, no additional text or explanations.`
                           </div>
                           <div className="flex-1">
                             <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">Additional Information</p>
-                            <p className="text-sm text-gray-700 leading-relaxed">{optimizationResults.jobDetails.other}</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{optimizationResults?.jobDetails?.other}</p>
                           </div>
                         </div>
                       </div>
@@ -1441,7 +1449,7 @@ Return only the JSON object, no additional text or explanations.`
                 </div>
               </div>
               <div className="text-gray-700 leading-relaxed text-sm">
-                {optimizationResults.overallRecommendations ? (
+                {optimizationResults && optimizationResults.overallRecommendations ? (
                   <div className="space-y-3">
                     {Array.isArray(optimizationResults.overallRecommendations) ? 
                       optimizationResults.overallRecommendations.map((rec: string, i: number) => (
@@ -1460,7 +1468,7 @@ Return only the JSON object, no additional text or explanations.`
                       </div>
                     }
                   </div>
-                ) : optimizationResults.improvements ? (
+                ) : optimizationResults && optimizationResults.improvements ? (
                   <div className="space-y-3">
                     {Array.isArray(optimizationResults.improvements) ? 
                       optimizationResults.improvements.map((imp: string, i: number) => (
@@ -1507,10 +1515,10 @@ Return only the JSON object, no additional text or explanations.`
                   </div>
                 </div>
                 <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                  {Array.isArray(optimizationResults.keywords) ? optimizationResults.keywords.length : 0}
+                  {optimizationResults && Array.isArray(optimizationResults.keywords) ? optimizationResults.keywords.length : 0}
                 </span>
               </div>
-              {Array.isArray(optimizationResults.keywords) && optimizationResults.keywords.length > 0 ? (
+              {optimizationResults && Array.isArray(optimizationResults.keywords) && optimizationResults.keywords.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {optimizationResults.keywords.map((kw: string, i: number) => (
                     <span key={i} className="px-3 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 rounded-lg text-sm font-medium border border-green-200 hover:from-green-200 hover:to-emerald-200 transition-all duration-200">
@@ -1555,7 +1563,7 @@ Return only the JSON object, no additional text or explanations.`
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-lg border border-gray-200">
                     <pre className="text-xs overflow-x-auto max-h-64 font-mono text-gray-700 leading-relaxed">
-                      {JSON.stringify(optimizationResults, null, 2)}
+                      {optimizationResults ? JSON.stringify(optimizationResults, null, 2) : 'No data available'}
                     </pre>
                   </div>
                 </div>
@@ -1768,160 +1776,220 @@ Return only the JSON object, no additional text or explanations.`
             </div>
           )}
 
-          {/* 5. Cover Letter Generation Section */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
+                    {/* 5. Cover Letter Generation Section */}
+          <div className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100 to-transparent rounded-full opacity-30 -translate-y-16 translate-x-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-100 to-transparent rounded-full opacity-40 translate-y-12 -translate-x-12"></div>
+            
+            <div className="relative flex items-center justify-between mb-8">
               <div className="flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mr-6 shadow-xl">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Generate Cover Letter (optional)</h3>
-                  <p className="text-sm text-gray-600">Expand to generate a cover letter along with your CV</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-2xl font-bold text-gray-900">Cover Letter Generator</h3>
+                    <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold rounded-full">AI-Powered</span>
+                  </div>
+                  <p className="text-gray-600 max-w-md">Create a compelling, personalized cover letter that matches your CV and job requirements</p>
                 </div>
               </div>
                         <button
                 onClick={() => setCoverLetterExpanded(!coverLetterExpanded)}
-                className={`px-3 py-1 rounded text-sm ${coverLetterExpanded ? 'bg-gradient-to-r from-ocean-500 to-ocean-600 text-white' : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700'} transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105`}
+                className={`group relative px-8 py-4 rounded-2xl font-semibold transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 ${
+                  coverLetterExpanded 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-blue-200' 
+                    : 'bg-white text-blue-600 border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50'
+                }`}
               >
-                {coverLetterExpanded ? 'Collapse' : 'Expand'}
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">{coverLetterExpanded ? 'Collapse' : 'Expand'}</span>
+                  <svg 
+                    className={`w-6 h-6 transition-transform duration-300 ${coverLetterExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                {!coverLetterExpanded && (
+                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full animate-pulse shadow-lg"></div>
+                )}
                         </button>
-            </div>
-
-            {coverLetterExpanded && (
-              <div className="space-y-4">
-                {/* Source Data Summary */}
-                <div className="bg-gradient-to-r from-ocean-50 to-cyan-50 border border-ocean-200 rounded-lg p-4">
-                  <h4 className="font-medium text-ocean-900 mb-2">Source Data</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-ocean-700">CV:</span>
-                      <p className="text-ocean-800">{masterCV?.name || 'Not uploaded'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-ocean-700">Job Description:</span>
-                      <p className="text-ocean-800">{jobDescription.substring(0, 50)}...</p>
-                    </div>
-                      </div>
                     </div>
                     
-
+            {coverLetterExpanded && (
+              <div className="space-y-6 animate-fadeIn">
+                {/* Source Data Summary */}
+                <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-blue-900">Source Data</h4>
+                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                      <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">CV File</span>
+                      <p className="text-blue-900 font-medium">{masterCV?.name || 'Not uploaded'}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                      <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">Job Description</span>
+                      <p className="text-blue-900 font-medium">{jobDescription.substring(0, 50)}...</p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Cover Letter Options */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Cover Letter Settings</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Style</label>
-                    <select
-                      value={coverLetterStyle}
-                      onChange={(e) => setCoverLetterStyle(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="traditional">Traditional</option>
-                      <option value="modern">Modern</option>
-                      <option value="creative">Creative</option>
-                      <option value="executive">Executive</option>
-                      <option value="casual">Casual</option>
-                      <option value="formal">Formal</option>
-                      <option value="storytelling">Storytelling</option>
-                      <option value="results-driven">Results-Driven</option>
-                    </select>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Style</label>
+                      <select
+                        value={coverLetterStyle}
+                        onChange={(e) => setCoverLetterStyle(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      >
+                        <option value="traditional">Traditional</option>
+                        <option value="modern">Modern</option>
+                        <option value="creative">Creative</option>
+                        <option value="executive">Executive</option>
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                        <option value="storytelling">Storytelling</option>
+                        <option value="results-driven">Results-Driven</option>
+                      </select>
                       </div>
                       <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tone</label>
-                    <select
-                      value={coverLetterTone}
-                      onChange={(e) => setCoverLetterTone(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="professional">Professional</option>
-                      <option value="enthusiastic">Enthusiastic</option>
-                      <option value="confident">Confident</option>
-                      <option value="passionate">Passionate</option>
-                      <option value="assertive">Assertive</option>
-                      <option value="friendly">Friendly</option>
-                      <option value="authoritative">Authoritative</option>
-                      <option value="humble">Humble</option>
-                      <option value="energetic">Energetic</option>
-                      <option value="calm">Calm</option>
-                    </select>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tone</label>
+                      <select
+                        value={coverLetterTone}
+                        onChange={(e) => setCoverLetterTone(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      >
+                        <option value="professional">Professional</option>
+                        <option value="enthusiastic">Enthusiastic</option>
+                        <option value="confident">Confident</option>
+                        <option value="passionate">Passionate</option>
+                        <option value="assertive">Assertive</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="authoritative">Authoritative</option>
+                        <option value="humble">Humble</option>
+                        <option value="energetic">Energetic</option>
+                        <option value="calm">Calm</option>
+                      </select>
                       </div>
                     </div>
                     
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hiring Manager</label>
-                    <input
-                      type="text"
-                      value={hiringManager}
-                      onChange={(e) => setHiringManager(e.target.value)}
-                      placeholder="Hiring Manager Name"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Hiring Manager</label>
+                                            <input
+                        type="text"
+                        value={hiringManager}
+                        onChange={(e) => setHiringManager(e.target.value)}
+                        placeholder="Hiring Manager Name"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      />
                     </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Company Name"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Company Name"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      />
                   </div>
               </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Where did you find this job?</label>
-                  <select
-                    value={jobSource}
-                    onChange={(e) => setJobSource(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  >
-                    <option value="company website">Company website</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="indeed">Indeed</option>
-                    <option value="glassdoor">Glassdoor</option>
-                    <option value="referral">Referral</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Where did you find this job?</label>
+                    <select
+                      value={jobSource}
+                      onChange={(e) => setJobSource(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    >
+                      <option value="company website">Company website</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="indeed">Indeed</option>
+                      <option value="glassdoor">Glassdoor</option>
+                      <option value="referral">Referral</option>
+                      <option value="other">Other</option>
+                    </select>
+                </div>
                 </div>
 
                 {/* Cover Letter Template Checkbox */}
                 {coverLetterTemplate && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={useCoverLetterTemplate}
-                        onChange={(e) => setUseCoverLetterTemplate(e.target.checked)}
-                        className="w-4 h-4 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2"
-                      />
-                      <span className="font-medium text-yellow-900">Use uploaded cover letter template</span>
-                    </label>
-                    <p className="text-sm text-yellow-700 mt-1">Template: {coverLetterTemplate.name}</p>
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={useCoverLetterTemplate}
+                            onChange={(e) => setUseCoverLetterTemplate(e.target.checked)}
+                            className="w-5 h-5 text-yellow-600 bg-white border-yellow-300 rounded focus:ring-yellow-500 focus:ring-2 transition-all duration-200"
+                          />
+                          <span className="font-semibold text-yellow-900">Use uploaded cover letter template</span>
+                        </label>
+                        <p className="text-sm text-yellow-700 mt-1">Template: {coverLetterTemplate.name}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={handleGenerateCoverLetter}
                     disabled={isGeneratingCoverLetter || !masterCV || !jobDescription.trim()}
-                    className={`bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex-1 ${isGeneratingCoverLetter ? 'opacity-80' : ''}`}
+                    className={`group relative bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex-1 ${isGeneratingCoverLetter ? 'opacity-80' : ''}`}
                   >
-                    {isGeneratingCoverLetter ? <span className="spinner mr-2"></span> : null}
-                    {isGeneratingCoverLetter ? 'Generating...' : 'Auto Generate'}
+                    <div className="flex items-center justify-center">
+                      {isGeneratingCoverLetter ? (
+                        <>
+                          <span className="spinner mr-3"></span>
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 mr-2 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          <span>Auto Generate</span>
+                        </>
+                      )}
+                    </div>
                   </button>
                   <button
                     onClick={() => {
                       setIsManualCoverLetter(true)
                       setShowManualOptimization(!showManualOptimization)
                     }}
-                    className={`bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex-1 ${showManualOptimization ? 'ring-2 ring-blue-300' : ''}`}
+                    className={`group relative bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:from-cyan-600 hover:via-blue-600 hover:to-indigo-600 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex-1 ${showManualOptimization ? 'ring-2 ring-blue-300' : ''}`}
                   >
-                    Manual Generate
+                    <div className="flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Manual Generate</span>
+                    </div>
                   </button>
                 </div>
 
@@ -2005,7 +2073,7 @@ Return only the JSON object, no additional text or explanations.`
               disabled={isGenerating || suggestedEdits.length === 0}
                 >
               {isGenerating ? <span className="spinner mr-2"></span> : null}
-              {isGenerating ? 'Generating...' : coverLetterExpanded ? 'Save CV and Cover Letter' : 'Generate Optimized CV'}
+                                  {isGenerating ? 'Generating...' : coverLetterExpanded ? 'Save CV and Cover Letter' : 'Save Optimized CV'}
                 </button>
           </div>
           
@@ -2326,7 +2394,7 @@ Return only the JSON object, no additional text or explanations.`
                           {successFolderPath.split('|')[5] || successFolderPath}
                         </div>
                       </div>
-                    </div>
+              </div>
             </div>
           )}
               </div>

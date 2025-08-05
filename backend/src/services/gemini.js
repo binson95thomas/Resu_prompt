@@ -1,7 +1,13 @@
 import axios from 'axios'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-dotenv.config()
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Load environment variables from project root
+dotenv.config({ path: path.join(__dirname, '..', '..', '..', '.env') })
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent'
@@ -131,10 +137,24 @@ Return only the JSON object, no additional text.
     console.log('Raw Gemini response:', response)
     
     try {
-      // Extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0])
+      // Extract JSON from response - handle multiple JSON objects
+      const jsonMatches = response.match(/\{[\s\S]*?\}/g)
+      if (jsonMatches && jsonMatches.length > 0) {
+        // Try to parse each JSON object and return the first valid one
+        for (const jsonMatch of jsonMatches) {
+          try {
+            const parsed = JSON.parse(jsonMatch)
+            // Check if this looks like a job analysis response
+            if (parsed.keywords || parsed.skills || parsed.requirements) {
+              return parsed
+            }
+          } catch (e) {
+            // Continue to next match
+            continue
+          }
+        }
+        // If no valid job analysis found, return the first valid JSON
+        return JSON.parse(jsonMatches[0])
       }
       throw new Error('No valid JSON found in response')
     } catch (parseError) {
@@ -361,8 +381,16 @@ Return only the content for this section, no additional formatting or explanatio
       companyName = '',
       coverLetterTemplate = null,
       jobSource = 'company website',
-      useTemplate = false
+      useTemplate = false,
+      customPrompt = null,
+      isJobSearch = false
     } = options;
+
+    // Handle job search requests
+    if (isJobSearch && customPrompt) {
+      console.log('🔍 Processing job search request with custom prompt');
+      return await this.makeRequest(customPrompt);
+    }
 
     // Use shared prompt template for consistency
     const fs = await import('fs/promises');

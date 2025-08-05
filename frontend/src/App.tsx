@@ -3,9 +3,13 @@ import { FileText, Briefcase, Settings, Download } from 'lucide-react'
 import MasterDataTab from './components/MasterDataTab'
 import JobDescriptionTab from './components/JobDescriptionTab'
 import GenerateCVTab from './components/GenerateCVTab'
+import JobHuntTab from './components/JobHuntTab'
+import JobTrackerTab from './components/JobTrackerTab'
 import GeminiChatHistory, { ChatEntry } from './components/GeminiChatHistory';
 import SettingsModal from './components/SettingsModal';
 import Sidebar from './components/Sidebar';
+import { getAIService, updateAIService } from './services/aiService'
+import { getDefaultModelSettings } from './types/modelSettings'
 
 interface Todo {
   id: string;
@@ -13,7 +17,7 @@ interface Todo {
   status: 'pending' | 'completed' | 'cancelled';
 }
 
-type TabType = 'master' | 'job' | 'generate'
+type TabType = 'master' | 'job' | 'generate' | 'jobhunt' | 'jobtracker'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -53,7 +57,7 @@ export default function App() {
     if (settingsData) {
       try {
         const settings = JSON.parse(settingsData);
-        return {
+        const result = {
           userName: settings.userName || localStorage.getItem('userName') || '',
           resumeFolder: settings.resumeFolder || localStorage.getItem('resumeFolder') || '',
           apiHitLimit: settings.apiHitLimit || parseInt(localStorage.getItem('apiHitLimit') || '50'),
@@ -61,11 +65,13 @@ export default function App() {
           apiResetTime: settings.apiResetTime || localStorage.getItem('apiResetTime') || '00:00',
           apiResetFrequency: settings.apiResetFrequency || localStorage.getItem('apiResetFrequency') || 'daily'
         };
+        console.log('🔢 Loaded settings:', result);
+        return result;
       } catch (error) {
         console.warn('Failed to parse settings, using fallback values');
       }
     }
-    return {
+    const result = {
       userName: localStorage.getItem('userName') || '',
       resumeFolder: localStorage.getItem('resumeFolder') || '',
       apiHitLimit: parseInt(localStorage.getItem('apiHitLimit') || '50'),
@@ -73,6 +79,8 @@ export default function App() {
       apiResetTime: localStorage.getItem('apiResetTime') || '00:00',
       apiResetFrequency: localStorage.getItem('apiResetFrequency') || 'daily'
     };
+    console.log('🔢 Loaded fallback settings:', result);
+    return result;
   };
 
   const initialSettings = loadSettings();
@@ -80,13 +88,66 @@ export default function App() {
   const [resumeFolder, setResumeFolder] = useState(initialSettings.resumeFolder);
   const [apiHitLimit, setApiHitLimit] = useState(initialSettings.apiHitLimit);
   const [apiHitsUsed, setApiHitsUsed] = useState(initialSettings.apiHitsUsed);
+  const [apiHitsByProvider, setApiHitsByProvider] = useState(() => {
+    const saved = localStorage.getItem('apiHitsByProvider');
+    const result = saved ? JSON.parse(saved) : {
+      gemini: 0,
+      'gemini-vertex': 0,
+      openrouter: 0,
+      local: 0
+    };
+    console.log('🔢 Loaded apiHitsByProvider:', result);
+    return result;
+  });
   const [apiResetTime, setApiResetTime] = useState(initialSettings.apiResetTime);
   const [apiResetFrequency, setApiResetFrequency] = useState(initialSettings.apiResetFrequency);
+  const [currentApiProvider, setCurrentApiProvider] = useState<string | null>(null);
   const [apiLastReset, setApiLastReset] = useState(() => {
     const saved = localStorage.getItem('apiLastReset');
     return saved ? new Date(saved) : new Date();
   });
   const [todos, setTodos] = useState<Todo[]>([]);
+
+  // Initialize AI service with model settings
+  useEffect(() => {
+    const loadModelSettings = async () => {
+      try {
+        // Try to load from localStorage first
+        const savedModelSettings = localStorage.getItem('modelSettings');
+        console.log('🔧 App - Loading model settings from localStorage:', savedModelSettings);
+        
+        if (savedModelSettings) {
+          const settings = JSON.parse(savedModelSettings);
+          console.log('🔧 App - Parsed localStorage settings:', settings);
+          updateAIService(settings);
+        } else {
+          console.log('🔧 App - No localStorage settings, loading from backend...');
+          // Try to load from backend
+          const response = await fetch('/api/settings/model-settings');
+          if (response.ok) {
+            const settings = await response.json();
+            console.log('🔧 App - Loaded settings from backend:', settings);
+            updateAIService(settings);
+            localStorage.setItem('modelSettings', JSON.stringify(settings));
+          } else {
+            console.log('🔧 App - Backend failed, using defaults');
+            // Use defaults
+            const defaultSettings = getDefaultModelSettings();
+            updateAIService(defaultSettings);
+            localStorage.setItem('modelSettings', JSON.stringify(defaultSettings));
+          }
+        }
+      } catch (error) {
+        console.error('🔧 App - Failed to load model settings:', error);
+        // Use defaults on error
+        const defaultSettings = getDefaultModelSettings();
+        updateAIService(defaultSettings);
+        localStorage.setItem('modelSettings', JSON.stringify(defaultSettings));
+      }
+    };
+
+    loadModelSettings();
+  }, []);
 
   // Persist active tab
   useEffect(() => {
@@ -135,6 +196,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('apiHitsUsed', apiHitsUsed.toString());
   }, [apiHitsUsed]);
+
+  useEffect(() => {
+    localStorage.setItem('apiHitsByProvider', JSON.stringify(apiHitsByProvider));
+  }, [apiHitsByProvider]);
 
   useEffect(() => {
     localStorage.setItem('apiResetTime', apiResetTime);
@@ -355,6 +420,7 @@ export default function App() {
     }
     
     if (shouldReset) {
+      console.log('🔢 API Reset triggered! Resetting apiHitsUsed to 0');
       setApiHitsUsed(0);
       setApiLastReset(now);
       localStorage.setItem('apiHitsUsed', '0');
@@ -370,15 +436,32 @@ export default function App() {
   }, [apiResetFrequency, apiResetTime, apiLastReset]);
 
   // Increment API hits
-  const incrementApiHits = () => {
+  const incrementApiHits = (provider?: string) => {
+    console.log('🔢 incrementApiHits called with provider:', provider);
+    console.log('🔢 Current apiHitsUsed:', apiHitsUsed);
+    
     // Check for reset before incrementing
     checkApiReset();
     
     setApiHitsUsed(prev => {
       const newValue = prev + 1;
+      console.log('🔢 Setting apiHitsUsed to:', newValue);
       localStorage.setItem('apiHitsUsed', newValue.toString());
       return newValue;
     });
+
+    // Also increment provider-specific count if provider is specified
+    if (provider) {
+      setApiHitsByProvider(prev => {
+        const newProviderHits = {
+          ...prev,
+          [provider]: (prev[provider] || 0) + 1
+        };
+        console.log('🔢 Setting provider hits:', newProviderHits);
+        localStorage.setItem('apiHitsByProvider', JSON.stringify(newProviderHits));
+        return newProviderHits;
+      });
+    }
   };
 
   // Keyboard shortcut for sidebar toggle (Ctrl/Cmd + B)
@@ -444,8 +527,10 @@ export default function App() {
         onToggleSidebar={handleToggleSidebar}
         apiHitLimit={apiHitLimit}
         apiHitsUsed={apiHitsUsed}
+        apiHitsByProvider={apiHitsByProvider}
         apiResetTime={apiResetTime}
         apiResetFrequency={apiResetFrequency}
+        currentApiProvider={currentApiProvider}
       />
       <div className={`flex-1 flex flex-col min-w-0 lg:transition-all lg:duration-300`}>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 md:p-12 bg-gray-50 mobile-padding">
@@ -461,14 +546,18 @@ export default function App() {
                 onClearMasterData={handleClearMasterData}
                 coverLetterTemplate={coverLetterTemplate}
                 setCoverLetterTemplate={setCoverLetterTemplate}
+                setChatHistory={setChatHistory}
+                incrementApiHits={incrementApiHits}
             />
           )}
           {activeTab === 'job' && (
             <JobDescriptionTab
               jobDescription={jobDescription}
               setJobDescription={setJobDescription}
-                setChatHistory={setChatHistory}
-                incrementApiHits={incrementApiHits}
+              setChatHistory={setChatHistory}
+              incrementApiHits={incrementApiHits}
+              aiService={getAIService()}
+              setCurrentApiProvider={setCurrentApiProvider}
             />
           )}
           {activeTab === 'generate' && (
@@ -481,6 +570,21 @@ export default function App() {
                 incrementApiHits={incrementApiHits}
                 coverLetterTemplate={coverLetterTemplate}
                 setActiveTab={setActiveTab}
+                setCurrentApiProvider={setCurrentApiProvider}
+            />
+          )}
+          {activeTab === 'jobhunt' && (
+            <JobHuntTab
+              setChatHistory={setChatHistory}
+              incrementApiHits={incrementApiHits}
+              setActiveTab={setActiveTab}
+            />
+          )}
+          {activeTab === 'jobtracker' && (
+            <JobTrackerTab
+              setChatHistory={setChatHistory}
+              incrementApiHits={incrementApiHits}
+              setActiveTab={setActiveTab}
             />
           )}
         </div>
@@ -492,13 +596,16 @@ export default function App() {
           initialResumeFolder={resumeFolder}
           initialApiHitLimit={apiHitLimit}
           initialApiHitsUsed={apiHitsUsed}
+          initialApiHitsByProvider={apiHitsByProvider}
           initialApiResetTime={apiResetTime}
           initialApiResetFrequency={apiResetFrequency}
-          onSave={({ userName, resumeFolder, apiHitLimit, apiHitsUsed, apiResetTime, apiResetFrequency }) => {
+          onSave={({ userName, resumeFolder, apiHitLimit, apiHitsUsed, apiHitsByProvider, apiResetTime, apiResetFrequency, modelSettings }) => {
+            console.log('🔧 App - onSave called with modelSettings:', modelSettings);
             setUserName(userName);
             setResumeFolder(resumeFolder);
             setApiHitLimit(apiHitLimit);
             setApiHitsUsed(apiHitsUsed);
+            setApiHitsByProvider(apiHitsByProvider);
             setApiResetTime(apiResetTime);
             setApiResetFrequency(apiResetFrequency);
             // Save settings immediately to localStorage
@@ -506,8 +613,17 @@ export default function App() {
             localStorage.setItem('resumeFolder', resumeFolder);
             localStorage.setItem('apiHitLimit', apiHitLimit.toString());
             localStorage.setItem('apiHitsUsed', apiHitsUsed.toString());
+            localStorage.setItem('apiHitsByProvider', JSON.stringify(apiHitsByProvider));
             localStorage.setItem('apiResetTime', apiResetTime);
             localStorage.setItem('apiResetFrequency', apiResetFrequency);
+            // Save model settings if provided
+            if (modelSettings) {
+              console.log('🔧 App - Saving modelSettings to localStorage:', modelSettings);
+              localStorage.setItem('modelSettings', JSON.stringify(modelSettings));
+              // Update the AI service with new settings
+              console.log('🔧 App - Updating AI service with new settings');
+              updateAIService(modelSettings);
+            }
             // Also save to a dedicated settings object
             const settings = {
               userName,
@@ -516,6 +632,7 @@ export default function App() {
               apiHitsUsed,
               apiResetTime,
               apiResetFrequency,
+              modelSettings,
               lastUpdated: new Date().toISOString()
             };
             localStorage.setItem('resuPromptSettings', JSON.stringify(settings));

@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { Briefcase, Search, Target, TrendingUp, Download as DownloadIcon, Copy as CopyIcon, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import Tabs from './Tabs';
 
+import { AIService } from '../services/aiService';
+
 interface JobDescriptionTabProps {
   jobDescription: string
   setJobDescription: (description: string) => void
   setChatHistory: (fn: (prev: any[]) => any[]) => void
-  incrementApiHits: () => void
+  incrementApiHits: (provider?: string) => void
+  aiService?: AIService
+  setCurrentApiProvider: (provider: string | null) => void
 }
 
 function copyToClipboard(text: string) {
@@ -35,7 +39,9 @@ export default function JobDescriptionTab({
   jobDescription, 
   setJobDescription, 
   setChatHistory,
-  incrementApiHits
+  incrementApiHits,
+  aiService,
+  setCurrentApiProvider
 }: JobDescriptionTabProps) {
   const [analysis, setAnalysis] = useState<any>(() => {
     const saved = localStorage.getItem('jdAnalysis');
@@ -50,6 +56,7 @@ export default function JobDescriptionTab({
   const [collapsed, setCollapsed] = useState(true)
   const [isCached, setIsCached] = useState(false);
   const [lastHash, setLastHash] = useState<string | null>(null);
+  // Remove local currentProvider state since we're using the global one
 
   // Persist analysis results
   useEffect(() => {
@@ -90,6 +97,7 @@ export default function JobDescriptionTab({
     setRawResponse(null)
     setShowRawResponse(false)
     setIsCached(false)
+    setCurrentApiProvider(null)
     const cacheKey = await getCacheKey(jobDescription);
     setLastHash(cacheKey);
     const cached = localStorage.getItem(cacheKey);
@@ -101,35 +109,63 @@ export default function JobDescriptionTab({
       return;
     }
     try {
-      const response = await fetch('/api/optimize/analyze-jd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobDescription })
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to analyze job description')
+      let data;
+      let provider = 'Gemini API';
+      
+      if (aiService) {
+        // Use AI service for provider-based routing
+        const tabSettings = aiService.getModelSettings().jobDescription;
+                provider = tabSettings.provider === 'gemini' ? 'Gemini API 1.5 Flash' :
+                  tabSettings.provider === 'gemini-vertex' ? 'Gemini Vertex 2.0 Flash' :
+                  tabSettings.provider === 'openrouter' ? 'OpenRouter Gemini 2.5 Pro' :
+                  tabSettings.provider === 'local' ? 'Local LLM' : 'Unknown API';
+        setCurrentApiProvider(provider);
+        
+        data = await aiService.makeRequest('jobDescription', jobDescription, {
+          endpoint: '/api/optimize/analyze-jd'
+        });
+        setAnalysis(data.analysis || data);
+        setRawResponse(JSON.stringify(data, null, 2));
+              } else {
+          // Fallback to direct API call
+          setCurrentApiProvider('Gemini API');
+        const response = await fetch('/api/optimize/analyze-jd', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobDescription })
+        });
+        data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || data.message || 'Failed to analyze job description');
+        }
+        setAnalysis(data.analysis);
+        setRawResponse(JSON.stringify(data, null, 2));
       }
-      setAnalysis(data.analysis)
-      setRawResponse(JSON.stringify(data, null, 2))
-      setIsAnalyzing(false)
-      setIsCached(false)
-      incrementApiHits(); // Increment API hits on successful call
+      
+      setIsAnalyzing(false);
+      setIsCached(false);
+      console.log('🔢 JobDescriptionTab - Provider for incrementApiHits:', provider);
+              incrementApiHits(provider === 'Gemini API 1.5 Flash' ? 'gemini' :
+                  provider === 'Gemini Vertex 2.0 Flash' ? 'gemini-vertex' :
+                  provider === 'OpenRouter Gemini 2.5 Pro' ? 'openrouter' :
+                  provider === 'Local LLM' ? 'local' : 'gemini'); // Increment API hits on successful call
+      setCurrentApiProvider(null);
       setChatHistory(prev => [
         ...prev,
         {
           question: jobDescription,
           answer: JSON.stringify(data, null, 2),
           timestamp: new Date().toISOString(),
-          model: 'Gemini 1.5 Flash',
+          model: data.model || 'Gemini 1.5 Flash',
           promptSource: 'API'
         }
-      ])
+      ]);
       // Cache the result
-      localStorage.setItem(cacheKey, JSON.stringify(data.analysis));
+      localStorage.setItem(cacheKey, JSON.stringify(data.analysis || data));
     } catch (error: any) {
-      setError(error.message || 'Failed to analyze job description. Please try again.')
-      setIsAnalyzing(false)
+      setError(error.message || 'Failed to analyze job description. Please try again.');
+      setIsAnalyzing(false);
+      setCurrentApiProvider(null);
     }
   }
 

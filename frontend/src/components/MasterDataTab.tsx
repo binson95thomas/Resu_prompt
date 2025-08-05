@@ -15,6 +15,8 @@ interface MasterDataTabProps {
   onClearMasterData: () => void
   coverLetterTemplate: File | null
   setCoverLetterTemplate: (file: File | null) => void
+  setChatHistory: (fn: (prev: any[]) => any[]) => void
+  incrementApiHits: (provider?: string) => void
 }
 
 export default function MasterDataTab({ 
@@ -26,7 +28,9 @@ export default function MasterDataTab({
   masterCVSize,
   onClearMasterData,
   coverLetterTemplate,
-  setCoverLetterTemplate
+  setCoverLetterTemplate,
+  setChatHistory,
+  incrementApiHits
 }: MasterDataTabProps) {
   const [activeSection, setActiveSection] = React.useState<'cv' | 'structured'>('cv')
   const [isProcessing, setIsProcessing] = useState(false);
@@ -118,6 +122,20 @@ export default function MasterDataTab({
       const data = await response.json();
       setStructuredData(data);
       setRawResponse(JSON.stringify(data, null, 2));
+      
+      // Save to chat history with CV processing
+      setChatHistory(prev => [
+        ...prev,
+        {
+          question: `Process CV file: ${masterCV?.name || 'Unknown file'}`,
+          answer: JSON.stringify(data, null, 2),
+          timestamp: new Date().toISOString(),
+          model: 'Gemini 2.0 Flash',
+          promptSource: 'cv-processing'
+        }
+      ]);
+      
+      incrementApiHits('gemini'); // Master data processing uses Gemini by default
     } catch (error: any) {
       setError('Failed to process CV. Please try again.');
       console.error('Error processing CV:', error);

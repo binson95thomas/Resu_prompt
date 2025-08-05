@@ -4,7 +4,10 @@ import path from 'path'
 import fs from 'fs-extra'
 import mammoth from 'mammoth'
 import { analyzeJobDescription, optimizeCV, generateCoverLetter } from '../services/gemini.js'
+import { analyzeJobDescription as openRouterAnalyzeJobDescription, optimizeCV as openRouterOptimizeCV, generateCoverLetter as openRouterGenerateCoverLetter, searchJobs as openRouterSearchJobs, extractJobFromUrl as openRouterExtractJobFromUrl } from '../services/openrouter.js'
+import { analyzeJobDescription as geminiVertexAnalyzeJobDescription, optimizeCV as geminiVertexOptimizeCV, generateCoverLetter as geminiVertexGenerateCoverLetter, searchJobs as geminiVertexSearchJobs, extractJobFromUrl as geminiVertexExtractJobFromUrl } from '../services/gemini-vertex.js'
 import { extractTextFromDocx } from '../services/document.js'
+import { extractJobFromUrl as localExtractJobFromUrl } from '../services/local.js';
 
 const router = express.Router()
 
@@ -258,6 +261,41 @@ router.post('/generate-cover-letter', upload.single('cv'), async (req, res) => {
   }
 })
 
+// Job search endpoint
+router.post('/job-search', async (req, res) => {
+  try {
+    console.log('Job search request received')
+    console.log('Request body:', req.body)
+    
+    const { prompt } = req.body
+    
+    if (!prompt || !prompt.trim()) {
+      console.error('No prompt provided for job search')
+      return res.status(400).json({
+        error: 'Prompt is required for job search'
+      })
+    }
+
+    // Use Gemini for job search
+    const jobSearchResponse = await generateCoverLetter('', '', { 
+      customPrompt: prompt,
+      isJobSearch: true 
+    })
+    
+    console.log('Job search completed successfully')
+    res.json({
+      success: true,
+      response: jobSearchResponse
+    })
+  } catch (error) {
+    console.error('Job search error:', error)
+    res.status(500).json({
+      error: 'Failed to search jobs',
+      message: error.message
+    })
+  }
+})
+
 // Get prompt template for manual optimization
 router.get('/prompt-template', async (req, res) => {
   try {
@@ -339,5 +377,397 @@ router.post('/get-prompt', upload.single('cv'), async (req, res) => {
     })
   }
 })
+
+// Extract job details from URL
+router.post('/extract-job-from-url', async (req, res) => {
+  try {
+    const { url } = req.body
+
+    if (!url || !url.trim()) {
+      return res.status(400).json({
+        error: 'URL is required'
+      })
+    }
+
+    // Validate URL format
+    try {
+      new URL(url)
+    } catch (urlError) {
+      return res.status(400).json({
+        error: 'Invalid URL format'
+      })
+    }
+
+    console.log('Extracting job details from URL:', url)
+
+    // Create prompt for URL extraction
+    const extractionPrompt = `You are a job details extraction assistant. I will provide you with a job posting URL, and you need to extract all relevant job details from the content.
+
+URL: ${url}
+
+Please extract the following information from the job posting and return it in JSON format:
+
+{
+  "title": "Job Title",
+  "company": "Company Name", 
+  "location": "Location (City, State/Country)",
+  "salary": "Salary range if mentioned",
+  "type": "Full-time/Part-time/Contract/Remote/Onsite/Hybrid",
+  "description": "Brief job description (2-3 sentences)",
+  "requirements": ["requirement1", "requirement2", "requirement3"],
+  "benefits": ["benefit1", "benefit2", "benefit3"],
+  "sponsorship": true/false,
+  "postedDate": "YYYY-MM-DD",
+  "applicationDeadline": "YYYY-MM-DD (if mentioned)",
+  "jobUrl": "${url}"
+}
+
+Important guidelines:
+1. Extract only information that is clearly stated in the job posting
+2. If a field is not mentioned, use null or an empty array
+3. For requirements, focus on technical skills, experience, and qualifications
+4. For benefits, include perks, insurance, time-off, etc.
+5. For sponsorship, indicate if the company mentions visa sponsorship for international candidates
+6. Use today's date for postedDate if not specified
+7. Return only valid JSON, no additional text
+
+Please analyze the job posting content and extract the details in the specified JSON format.`
+
+    // Call Gemini API for extraction
+    const extractionResponse = await analyzeJobDescription(extractionPrompt)
+    
+    console.log('URL extraction completed successfully')
+    res.json({
+      success: true,
+      job: extractionResponse,
+      model: 'Gemini 2.0 Flash'
+    })
+  } catch (error) {
+    console.error('URL extraction error:', error)
+    res.status(500).json({
+      error: 'Failed to extract job details from URL',
+      message: error.message
+    })
+  }
+})
+
+// OpenRouter endpoints
+router.post('/openrouter/analyze-jd', async (req, res) => {
+  try {
+    const { jobDescription } = req.body
+
+    if (!jobDescription || !jobDescription.trim()) {
+      return res.status(400).json({
+        error: 'Job description is required'
+      })
+    }
+
+    console.log('Analyzing job description with OpenRouter...')
+    const analysis = await openRouterAnalyzeJobDescription(jobDescription)
+    
+    res.json({
+      success: true,
+      analysis,
+      model: 'OpenRouter GPT-4'
+    })
+  } catch (error) {
+    console.error('OpenRouter job analysis error:', error)
+    res.status(500).json({
+      error: 'Failed to analyze job description',
+      message: error.message
+    })
+  }
+})
+
+router.post('/openrouter/optimize-cv', async (req, res) => {
+  try {
+    const { cvText, jobDescription, structuredData } = req.body
+
+    if (!cvText || !jobDescription) {
+      return res.status(400).json({
+        error: 'CV text and job description are required'
+      })
+    }
+
+    console.log('Optimizing CV with OpenRouter...')
+    const optimization = await openRouterOptimizeCV(cvText, jobDescription, structuredData)
+    
+    res.json({
+      success: true,
+      optimization,
+      model: 'OpenRouter GPT-4'
+    })
+  } catch (error) {
+    console.error('OpenRouter CV optimization error:', error)
+    res.status(500).json({
+      error: 'Failed to optimize CV',
+      message: error.message
+    })
+  }
+})
+
+router.post('/openrouter/generate-cover-letter', async (req, res) => {
+  try {
+    const { cvText, jobDescription, style, tone } = req.body
+
+    if (!cvText || !jobDescription) {
+      return res.status(400).json({
+        error: 'CV text and job description are required'
+      })
+    }
+
+    console.log('Generating cover letter with OpenRouter...')
+    const coverLetter = await openRouterGenerateCoverLetter(cvText, jobDescription, { style, tone })
+    
+    res.json({
+      success: true,
+      coverLetter,
+      model: 'OpenRouter GPT-4'
+    })
+  } catch (error) {
+    console.error('OpenRouter cover letter generation error:', error)
+    res.status(500).json({
+      error: 'Failed to generate cover letter',
+      message: error.message
+    })
+  }
+})
+
+router.post('/openrouter/search-jobs', async (req, res) => {
+  try {
+    const { searchCriteria } = req.body
+
+    if (!searchCriteria || !searchCriteria.trim()) {
+      return res.status(400).json({
+        error: 'Search criteria is required'
+      })
+    }
+
+    console.log('Searching jobs with OpenRouter...')
+    const jobs = await openRouterSearchJobs(searchCriteria)
+    
+    res.json({
+      success: true,
+      jobs: jobs.jobs || [],
+      model: 'OpenRouter GPT-4'
+    })
+  } catch (error) {
+    console.error('OpenRouter job search error:', error)
+    res.status(500).json({
+      error: 'Failed to search jobs',
+      message: error.message
+    })
+  }
+})
+
+router.post('/openrouter/extract-job-from-url', async (req, res) => {
+  try {
+    const { url } = req.body
+
+    if (!url || !url.trim()) {
+      return res.status(400).json({
+        error: 'URL is required'
+      })
+    }
+
+    // Validate URL format
+    try {
+      new URL(url)
+    } catch (urlError) {
+      return res.status(400).json({
+        error: 'Invalid URL format'
+      })
+    }
+
+    console.log('Extracting job details from URL with OpenRouter:', url)
+    const jobData = await openRouterExtractJobFromUrl(url)
+    
+    res.json({
+      success: true,
+      job: jobData,
+      model: 'OpenRouter GPT-4'
+    })
+  } catch (error) {
+    console.error('OpenRouter URL extraction error:', error)
+    res.status(500).json({
+      error: 'Failed to extract job details from URL',
+      message: error.message
+    })
+  }
+})
+
+// Gemini Vertex endpoints
+router.post('/gemini-vertex/analyze-jd', async (req, res) => {
+  try {
+    const { jobDescription } = req.body
+
+    if (!jobDescription || !jobDescription.trim()) {
+      return res.status(400).json({
+        error: 'Job description is required'
+      })
+    }
+
+    console.log('Analyzing job description with Gemini Vertex...')
+    const analysis = await geminiVertexAnalyzeJobDescription(jobDescription)
+    
+    res.json({
+      success: true,
+      analysis,
+      model: 'Gemini 2.0 Flash'
+    })
+  } catch (error) {
+    console.error('Gemini Vertex job analysis error:', error)
+    res.status(500).json({
+      error: 'Failed to analyze job description',
+      message: error.message
+    })
+  }
+})
+
+router.post('/gemini-vertex/optimize-cv', async (req, res) => {
+  try {
+    const { cvText, jobDescription, structuredData } = req.body
+
+    if (!cvText || !jobDescription) {
+      return res.status(400).json({
+        error: 'CV text and job description are required'
+      })
+    }
+
+    console.log('Optimizing CV with Gemini Vertex...')
+    const optimization = await geminiVertexOptimizeCV(cvText, jobDescription, structuredData)
+    
+    res.json({
+      success: true,
+      optimization,
+      model: 'Gemini 2.0 Flash'
+    })
+  } catch (error) {
+    console.error('Gemini Vertex CV optimization error:', error)
+    res.status(500).json({
+      error: 'Failed to optimize CV',
+      message: error.message
+    })
+  }
+})
+
+router.post('/gemini-vertex/generate-cover-letter', async (req, res) => {
+  try {
+    const { cvText, jobDescription, style, tone } = req.body
+
+    if (!cvText || !jobDescription) {
+      return res.status(400).json({
+        error: 'CV text and job description are required'
+      })
+    }
+
+    console.log('Generating cover letter with Gemini Vertex...')
+    const coverLetter = await geminiVertexGenerateCoverLetter(cvText, jobDescription, { style, tone })
+    
+    res.json({
+      success: true,
+      coverLetter,
+      model: 'Gemini 2.0 Flash'
+    })
+  } catch (error) {
+    console.error('Gemini Vertex cover letter generation error:', error)
+    res.status(500).json({
+      error: 'Failed to generate cover letter',
+      message: error.message
+    })
+  }
+})
+
+router.post('/gemini-vertex/search-jobs', async (req, res) => {
+  try {
+    const { searchCriteria } = req.body
+
+    if (!searchCriteria || !searchCriteria.trim()) {
+      return res.status(400).json({
+        error: 'Search criteria is required'
+      })
+    }
+
+    console.log('Searching jobs with Gemini Vertex...')
+    const jobs = await geminiVertexSearchJobs(searchCriteria)
+    
+    res.json({
+      success: true,
+      jobs: jobs.jobs || [],
+      model: 'Gemini 2.0 Flash'
+    })
+  } catch (error) {
+    console.error('Gemini Vertex job search error:', error)
+    res.status(500).json({
+      error: 'Failed to search jobs',
+      message: error.message
+    })
+  }
+})
+
+router.post('/gemini-vertex/extract-job-from-url', async (req, res) => {
+  try {
+    const { url } = req.body
+
+    if (!url || !url.trim()) {
+      return res.status(400).json({
+        error: 'URL is required'
+      })
+    }
+
+    // Validate URL format
+    try {
+      new URL(url)
+    } catch (urlError) {
+      return res.status(400).json({
+        error: 'Invalid URL format'
+      })
+    }
+
+    console.log('Extracting job details from URL with Gemini Vertex:', url)
+    const jobData = await geminiVertexExtractJobFromUrl(url)
+    
+    res.json({
+      success: true,
+      job: jobData,
+      model: 'Gemini 2.0 Flash'
+    })
+  } catch (error) {
+    console.error('Gemini Vertex URL extraction error:', error)
+    res.status(500).json({
+      error: 'Failed to extract job details from URL',
+      message: error.message
+    })
+  }
+})
+
+// Local LLM endpoint for extracting job details from URL
+router.post('/local/extract-job-from-url', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || !url.trim()) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch (urlError) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+    console.log('Extracting job details from URL with Local LLM:', url);
+    const jobData = await localExtractJobFromUrl(url);
+    res.json({
+      success: true,
+      job: jobData,
+      model: 'Local LLM (Ollama)'
+    });
+  } catch (error) {
+    console.error('Local LLM URL extraction error:', error);
+    res.status(500).json({
+      error: 'Failed to extract job details from URL (Local LLM)',
+      message: error.message
+    });
+  }
+});
 
 export default router 
